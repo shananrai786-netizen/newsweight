@@ -1,0 +1,9 @@
+[build]
+  publish = "site"
+
+# Only the main branch is published. The bot writes data to the "data" branch, so news updates never trigger a Netlify deploy.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

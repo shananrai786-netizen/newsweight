@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newsweight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: masthead, one control panel, then a ranked feed. Each story is score tile | full summary | slim column with infographic and score breakdown. */
+:root{
+  --paper:#F1F2EF; --card:#FFFFFF; --ink:#11161F; --ink-2:#4A5262; --line:#D9DCD6; --chip:#E7E9E4; --accent:#2457C5;
+  --d1:#66707F; --d2:#3A6A9C; --d3:#8F6000; --d4:#B1400E; --d5:#9B1C31;
+  --font-display:'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-ui:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E121A; --card:#161C27; --ink:#E9ECF2; --ink-2:#A6AEBE; --line:#2A3242; --chip:#202838; --accent:#8CAEFF;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E121A; --card:#161C27; --ink:#E9ECF2; --ink-2:#A6AEBE; --line:#2A3242; --chip:#202838; --accent:#8CAEFF;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.5 var(--font-ui)}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* masthead */
+.mast{border-bottom:1px solid var(--line);background:var(--card)}
+.mastrow{display:flex;align-items:center;gap:16px;min-height:60px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.brand{display:flex;align-items:center;gap:10px;font:italic 600 28px/1 var(--font-display);letter-spacing:-.01em}
+.brand svg{display:block}
+.pill{font:600 11px/1 var(--font-ui);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);background:var(--chip);color:var(--ink-2);padding:6px 10px;border-radius:99px}
+.search{margin-left:auto;flex:1 1 220px;max-width:340px}
+.search input{width:100%;height:40px;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:0 12px}
+.search input::placeholder{color:var(--ink-2)}
+
+.intro{padding:28px 0 18px}
+.dateline{font:500 12px/1 var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:0 0 10px}
+h1{font:500 clamp(28px,4.4vw,44px)/1.08 var(--font-display);letter-spacing:-.015em;margin:0;max-width:20ch;text-wrap:balance}
+.intro p.lede{margin:10px 0 0;color:var(--ink-2);max-width:60ch}
+
+/* controls */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:12px 20px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lab{font:600 11px/1 var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.seg-ctl{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
+.seg-ctl button{border:0;background:transparent;padding:0 16px;height:40px;font-weight:500}
+.seg-ctl button+button{border-left:1px solid var(--line)}
+.seg-ctl button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+select{height:40px;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:0 10px;min-width:180px;max-width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--chip);display:inline-flex;align-items:center;gap:8px;font-weight:500}
+.chip .ct{font:500 12px/1 var(--font-mono);color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.chip[aria-pressed="true"] .ct{color:var(--paper);opacity:.8}
+.chip.zero{opacity:.55}
+.sliderbox{display:flex;flex-direction:column;gap:6px;flex:1 1 320px}
+.sliderhead{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.readout{font-weight:600}
+.readout span{color:var(--ink-2);font-weight:400}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
+.ticks{display:flex;justify-content:space-between;font:500 11px/1 var(--font-mono);color:var(--ink-2);padding:0 6px}
+
+/* layout */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;margin:24px 0 48px;align-items:start}
+.feedhead{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+h2{font:500 26px/1.15 var(--font-display);margin:0;letter-spacing:-.01em}
+.sub{margin:0;color:var(--ink-2);font-size:14px}
+.feed{display:flex;flex-direction:column;gap:12px;container-type:inline-size}
+
+/* story: score tile | summary | slim column */
+.story{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.sgrid{display:grid;grid-template-columns:68px minmax(0,1fr) 232px;gap:18px;padding:16px}
+.score{width:68px;align-self:start;border-radius:6px;color:#fff;padding:9px 8px 8px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.score b{font:600 32px/1 var(--font-mono);letter-spacing:-.02em}
+.score small{font:600 10px/1 var(--font-ui);letter-spacing:.07em;text-transform:uppercase}
+.seg{display:grid;grid-template-columns:repeat(10,1fr);gap:1px;width:100%}
+.seg i{height:4px;background:rgba(255,255,255,.3)}
+.seg i.on{background:#fff}
+.b1{background:var(--d1)} .b2{background:var(--d2)} .b3{background:var(--d3)} .b4{background:var(--d4)} .b5{background:var(--d5)}
+.body{min-width:0}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--ink-2);margin-bottom:6px}
+.meta .src{font-weight:600;color:var(--ink)}
+.story h3{font:500 22px/1.2 var(--font-display);margin:0 0 8px;letter-spacing:-.005em;text-wrap:balance}
+.sum{margin:0 0 12px;font-size:15px;line-height:1.58;max-width:64ch}
+.mean{margin:0;padding:10px 12px;background:var(--chip);border-radius:8px;font-size:14px;max-width:64ch}
+.mean strong{display:block;font:600 10.5px/1 var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:5px}
+.term{margin:10px 0 0;font-size:13px;color:var(--ink-2);max-width:64ch}
+.term strong{color:var(--ink);font-weight:600}
+
+/* slim column */
+.aside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.fig{margin:0;background:var(--chip);border-radius:8px;padding:10px 12px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.cap{font:600 10.5px/1.25 var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2)}
+.big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.big b{font:600 24px/1 var(--font-mono);letter-spacing:-.02em}
+.chg{font:600 11px/1 var(--font-mono);padding:4px 7px;border-radius:99px;background:var(--card);color:var(--ink)}
+.chart{display:block;width:100%;height:auto}
+.xl{display:flex;justify-content:space-between;font:500 10.5px/1 var(--font-ui);color:var(--ink-2)}
+.chart .tv{fill:var(--ink);font:600 10.5px var(--font-mono)}
+.chart .tl{fill:var(--ink-2);font:500 9.5px var(--font-ui)}
+.facts{list-style:none;margin:0;padding:0}
+.facts li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+.facts li:first-child{border-top:0;padding-top:2px;grid-template-columns:minmax(0,1fr)}
+.facts .fl{font-size:12px;color:var(--ink-2)}
+.facts b{font:600 13px/1.2 var(--font-mono);text-align:right}
+.facts li:first-child b{font-size:19px;text-align:left}
+.facts em{grid-column:1 / -1;font:normal 11px/1.2 var(--font-ui);color:var(--ink-2);text-align:right}
+.facts li:first-child em{text-align:left}
+.splitbar{display:flex;height:26px;border-radius:6px;overflow:hidden;gap:2px}
+.splitbar i{display:block;min-width:4px}
+.legend{display:flex;flex-direction:column;gap:3px;font-size:12px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend .sw{width:10px;height:10px;border-radius:2px;flex:none}
+.legend b{font:600 12px var(--font-mono);margin-left:auto}
+.steps{list-style:none;margin:2px 0 4px;padding:0;display:grid;grid-template-columns:repeat(3,1fr)}
+.steps li{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 2px}
+.steps li::before{content:"";position:absolute;top:8px;left:-50%;right:50%;height:2px;background:var(--line)}
+.steps li:first-child::before{display:none}
+.steps li.done::before,.steps li.cur::before{background:var(--c)}
+.steps i{position:relative;z-index:1;width:18px;height:18px;border-radius:50%;border:2px solid var(--ink-2);background:var(--chip)}
+.steps li.done i{background:var(--c);border-color:var(--c)}
+.steps li.cur i{border-color:var(--c);box-shadow:inset 0 0 0 3px var(--chip), inset 0 0 0 9px var(--c)}
+.steps b{font-size:11.5px;line-height:1.2;font-weight:600}
+.steps small{font-size:10.5px;line-height:1.2;color:var(--ink-2)}
+.dots{display:flex;gap:4px}
+.dots i{flex:1;height:22px;border-radius:4px;background:var(--line)}
+.dots i.on{background:var(--c)}
+
+.bd h5{margin:0 0 7px;font:600 10.5px/1 var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.bd ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.bd li{display:grid;grid-template-columns:76px minmax(0,1fr) 16px;gap:6px;align-items:center;font-size:12px}
+.track{height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.track i{display:block;height:100%;background:var(--c);border-radius:3px}
+.bd li b{font:600 12px var(--font-mono);text-align:right}
+.why{margin:8px 0 0;font-size:12.5px;line-height:1.4;color:var(--ink-2)}
+.why strong{color:var(--ink);font-weight:600}
+
+.story.lead .sgrid{grid-template-columns:88px minmax(0,1fr) 260px;padding:20px}
+.story.lead .score{width:88px;padding:12px 10px 10px}
+.story.lead .score b{font-size:44px}
+.story.lead h3{font-size:30px;line-height:1.14}
+.story.lead .sum{font-size:16px}
+
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:32px;text-align:center;color:var(--ink-2)}
+.empty button{margin-top:12px;height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--chip);font-weight:600;color:var(--ink)}
+
+@container (max-width:720px){
+  .sgrid,.story.lead .sgrid{grid-template-columns:60px minmax(0,1fr);gap:14px}
+  .story .score,.story.lead .score{width:60px}
+  .story .score b,.story.lead .score b{font-size:28px}
+  .aside{grid-column:1 / -1}
+}
+@container (max-width:720px) and (min-width:540px){
+  .aside{display:grid;grid-template-columns:1fr 1fr;align-items:start}
+}
+@container (max-width:480px){
+  .story h3,.story.lead h3{font-size:20px}
+}
+
+/* sidebar */
+.side{display:flex;flex-direction:column;gap:16px;position:sticky;top:16px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.box h4{margin:0 0 4px;font:600 15px/1.3 var(--font-ui)}
+.box p.hint{margin:0 0 12px;font-size:13px;color:var(--ink-2)}
+.pulse{display:flex;flex-direction:column;gap:2px}
+.pulse button{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n v" "b b";gap:4px 8px;text-align:left;border:0;background:none;padding:8px;border-radius:8px}
+.pulse button:hover{background:var(--chip)}
+.pulse button[aria-pressed="true"]{background:var(--chip);outline:1px solid var(--line)}
+.pulse .n{grid-area:n;font-size:14px;font-weight:500}
+.pulse .v{grid-area:v;font:600 13px var(--font-mono)}
+.pulse .tr{grid-area:b;height:6px;border-radius:3px;background:var(--chip)}
+.pulse button[aria-pressed="true"] .tr{background:var(--paper)}
+.pulse .tr i{display:block;height:100%;border-radius:3px}
+.hist{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;align-items:end;height:136px}
+.hist .col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;border:0;background:none;padding:0;height:100%}
+.hist .n{font:500 11px/1 var(--font-mono);color:var(--ink-2)}
+.hist .bar{width:100%;border-radius:3px 3px 0 0}
+.hist .col:not(.on) .bar{opacity:.28}
+.hist .x{font:500 11px/1 var(--font-mono);color:var(--ink-2)}
+.recipe{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.recipe li{display:flex;justify-content:space-between;gap:8px}
+.recipe li span:last-child{font:500 12px var(--font-mono);color:var(--ink-2)}
+
+footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--ink-2);font-size:13px}
+
+@media (max-width:980px){
+  .cols{grid-template-columns:minmax(0,1fr)}
+  .side{position:static}
+}
+@media (max-width:640px){
+  .wrap{padding:0 16px}
+  .sgrid,.story.lead .sgrid{padding:14px}
+  .seg-ctl button{padding:0 12px}
+  select{min-width:0;width:100%}
+  .field{flex:1 1 140px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+
+[hidden]{display:none !important}
+/* header additions */
+.live{display:inline-flex;align-items:center;gap:7px;font:500 12.5px/1 var(--font-ui);color:var(--ink-2)}
+.dot{width:8px;height:8px;border-radius:50%;background:#1E9E5A;animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(30,158,90,.5)}70%{box-shadow:0 0 0 7px rgba(30,158,90,0)}100%{box-shadow:0 0 0 0 rgba(30,158,90,0)}}
+.profile{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 8px;border:1px solid var(--line);background:var(--paper);border-radius:99px;font-weight:600}
+.profile:hover{border-color:var(--accent)}
+.profile .av{width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:600 12px var(--font-ui)}
+.search{max-width:300px}
+
+/* feed header */
+.viewrow{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.newbar{margin-top:10px;height:42px;border-radius:8px;border:1px solid var(--accent);background:var(--card);color:var(--accent);font-weight:600}
+.chip.more{background:transparent;border-style:dashed}
+
+/* picture banner */
+.pic{position:relative;height:172px;overflow:hidden;background:#1d2a44}
+.pic svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.story.lead .pic{height:230px}
+.ptag,.pcap,.justin{position:absolute;font:600 11px/1 var(--font-ui);padding:6px 10px;border-radius:99px;color:#fff;background:rgba(8,12,20,.58)}
+.ptag{left:12px;top:12px;letter-spacing:.05em;text-transform:uppercase}
+.pcap{right:12px;bottom:10px;font-weight:500;font-size:10.5px;padding:4px 8px}
+.justin{right:12px;top:12px;background:#157A45}
+.story.fresh{box-shadow:0 0 0 2px #157A45}
+.why4{color:var(--accent);font-weight:600}
+
+/* personalised explanation */
+.mean.you{background:color-mix(in srgb,var(--accent) 12%,var(--card));outline:1px solid color-mix(in srgb,var(--accent) 38%,transparent)}
+.lenstag{display:inline-block;margin-left:8px;padding:3px 7px;border-radius:99px;background:var(--accent);color:var(--card);letter-spacing:.04em}
+.gen{margin:8px 0 0;font-size:13px;color:var(--ink-2);max-width:64ch}
+.gen strong{color:var(--ink);font-weight:600}
+.mytopics{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.mytopics span{font-size:12px;padding:4px 9px;border-radius:99px;background:var(--chip)}
+.primary{height:44px;padding:0 20px;border-radius:8px;border:0;background:var(--ink);color:var(--paper);font-weight:600}
+.secondary{height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--chip);font-weight:600;color:var(--ink)}
+
+/* onboarding */
+.ov{position:fixed;inset:0;background:rgba(8,12,20,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.dlg{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;width:min(620px,100%);max-height:100%;overflow:auto;padding:26px}
+.obstep{margin:0 0 8px;font:600 11px/1 var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.dlg h2{font:500 28px/1.15 var(--font-display);margin:0 0 6px}
+.obsub{margin:0 0 18px;color:var(--ink-2)}
+.opts{display:grid;gap:10px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{display:flex;flex-direction:column;gap:3px;text-align:left;padding:14px 16px;min-height:56px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
+.opt:hover{border-color:var(--accent)}
+.opt b{font-size:16px}
+.opt span{font-size:13.5px;color:var(--ink-2)}
+.obfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
+.linkbtn{border:0;background:none;color:var(--ink-2);text-decoration:underline;padding:10px 0;font-weight:500}
+@media (max-width:560px){.opts.two{grid-template-columns:1fr}.dlg{padding:20px}}
+@media (prefers-reduced-motion: reduce){.dot{animation:none}}
+/* time-range tabs, window note, glance, rank */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px;overflow-x:auto}
+.tab{flex:none;padding:12px 16px;border:0;border-bottom:3px solid transparent;background:none;font-weight:600;color:var(--ink-2);margin-bottom:-1px}
+.tab:hover{color:var(--ink)}
+.tab[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.winnote{margin:0 0 14px;font-size:14px;color:var(--ink-2);max-width:72ch}
+.winnote strong{color:var(--ink);font-weight:600}
+.rangebar{display:flex;gap:12px 20px;flex-wrap:wrap;align-items:flex-end;margin:0 0 14px}
+.glance{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px 8px;margin-bottom:12px}
+.glance h4{margin:0 0 8px;font:600 15px/1.3 var(--font-ui)}
+.glance ol{list-style:none;margin:0;padding:0}
+.glance li+li{border-top:1px solid var(--line)}
+.glance button{display:grid;grid-template-columns:28px minmax(0,1fr) 34px;gap:10px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:10px 0}
+.glance button:hover .gh{text-decoration:underline}
+.gr{font:600 15px var(--font-mono);color:var(--ink-2)}
+.gh{font:500 16px/1.3 var(--font-display)}
+.gs{font:600 13px var(--font-mono);color:#fff;border-radius:6px;text-align:center;padding:4px 0}
+.rank{position:absolute;left:12px;bottom:8px;font:600 24px/1 var(--font-mono);color:#fff;background:rgba(8,12,20,.62);padding:7px 11px;border-radius:8px}
+.buzz{font-weight:600;color:var(--ink)}
+
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap mastrow">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2" y="17" width="4" height="7" rx="1" fill="var(--d1)"/><rect x="8" y="13" width="4" height="11" rx="1" fill="var(--d2)"/><rect x="14" y="9" width="4" height="15" rx="1" fill="var(--d3)"/><rect x="20" y="3" width="4" height="21" rx="1" fill="var(--d5)"/></svg>
+      Newsweight
+    </div>
+    <span class="pill">Prototype · sample stories</span>
+    <span class="live" title="In this prototype, new stories are simulated to show how live updates will look."><i class="dot"></i><span id="liveTxt">Live</span></span>
+    <div class="search">
+      <label class="sr" for="q">Search headlines and summaries</label>
+      <input id="q" type="search" placeholder="Search stories" autocomplete="off">
+    </div>
+    <button type="button" class="profile" id="profile" aria-label="Your profile and feed settings"><span class="av" id="avatar" aria-hidden="true">+</span><span id="profileTxt">Set up your feed</span></button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <p class="dateline" id="dateline">India edition</p>
+    <h1>Every headline, weighed from 1 to 10.</h1>
+    <p class="lede">Tell us who you are and we show the news that matters for you, explained in your field's terms. Stories are ranked by intensity and refreshed through the day. Short on time? Open Top this week or Top this month.</p>
+  </section>
+
+  <section class="panel" aria-label="Filters">
+    <div class="row">
+      <div class="field">
+        <span class="lab" id="lab-region">Region</span>
+        <div class="seg-ctl" role="group" aria-labelledby="lab-region" id="region"></div>
+      </div>
+      <div class="field">
+        <label class="lab" for="src">Newspaper</label>
+        <select id="src"></select>
+      </div>
+      <div class="field" id="sortField">
+        <label class="lab" for="sort">Sort by</label>
+        <select id="sort">
+          <option value="latest">Newest first</option>
+          <option value="score">Highest intensity</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <span class="lab" id="lab-topic">Topic</span>
+      <div class="chips" id="topics" role="group" aria-labelledby="lab-topic"></div>
+    </div>
+    <div class="sliderbox">
+      <div class="sliderhead">
+        <label class="lab" for="min">Minimum intensity</label>
+        <div class="readout" id="readout" aria-live="polite"></div>
+      </div>
+      <input id="min" type="range" min="1" max="10" step="1" value="1">
+      <div class="ticks" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section aria-labelledby="feedTitle">
+      <div class="tabs" id="modes" role="group" aria-label="Time range"></div>
+      <p class="winnote" id="winNote"></p>
+      <div class="feedhead">
+        <div class="viewrow">
+          <div>
+            <h2 id="feedTitle"></h2>
+            <p class="sub" id="feedSub" aria-live="polite"></p>
+          </div>
+          <div class="seg-ctl" id="viewctl" role="group" aria-label="Feed view" hidden></div>
+        </div>
+        <button type="button" class="newbar" id="newbar" hidden></button>
+      </div>
+      <div class="rangebar" id="rangebar" hidden>
+        <div class="field">
+          <label class="lab" for="asof">See how the window moves</label>
+          <select id="asof">
+            <option value="0">Today</option>
+            <option value="1">Tomorrow</option>
+            <option value="2">In 2 days</option>
+            <option value="3">In 3 days</option>
+            <option value="7">In 7 days</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="lab" for="topn">Show</label>
+          <select id="topn">
+            <option value="10">Top 10</option>
+            <option value="20">Top 20</option>
+          </select>
+        </div>
+      </div>
+      <div class="glance" id="glance" hidden></div>
+      <div class="feed" id="feed"></div>
+    </section>
+
+    <aside class="side" aria-label="Overview">
+      <div class="box" id="me"></div>
+      <div class="box">
+        <h4>Topic pulse</h4>
+        <p class="hint">Average intensity per topic in this view. Select one to filter.</p>
+        <div class="pulse" id="pulse"></div>
+      </div>
+      <div class="box">
+        <h4>Score spread</h4>
+        <p class="hint">Stories at each score. Select a bar to set the minimum.</p>
+        <div class="hist" id="hist"></div>
+      </div>
+      <div class="box">
+        <h4>How a score is built</h4>
+        <p class="hint">Five ratings from 1 to 10, combined with fixed weights and rounded.</p>
+        <ul class="recipe" id="recipe"></ul>
+      </div>
+      <div class="box">
+        <h4>How buzz is measured</h4>
+        <p class="hint">Used to rank the weekly and monthly lists.</p>
+        <ul class="recipe">
+          <li><span>Intensity score</span><span>60%</span></li>
+          <li><span>Coverage across newspapers</span><span>40%</span></li>
+        </ul>
+        <p class="hint" style="margin:10px 0 0">The live site can add reader attention and market reaction.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">Every story, chart and score on this page is sample data for layout review. Pictures are illustrations drawn for each story, not photographs. In the live site each summary is written by us and credits the newspaper by name.</div>
+</footer>
+
+<div class="ov" id="ob" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="obT">
+    <div id="obBody"></div>
+  </div>
+</div>
+
+<script>
+/* Set this to your repo after setup (see README). Leave empty to use ./stories.json */
+window.NW_DATA="https://raw.githubusercontent.com/YOUR_GITHUB_USER/newsweight/data/stories.json";
+</script>
+<script>
+/*DATA*/
+const DIMS=[
+  ['Breadth','How many people or sectors it touches',.25],
+  ['Magnitude','How large the change is in absolute terms',.25],
+  ['Surprise','How far it departs from what was expected',.20],
+  ['Durability','How long the effect lasts',.15],
+  ['Actionability','Whether people need to respond',.15]
+];
+const RAW=[
+ // r region, t topic, src, hrs ago, h headline, sum summary, mean what it means, why score note, d ratings [B,M,S,D,A], p papers, viz figure, term optional
+ {r:'IN',t:'fin',src:'Economic Times',hrs:1.2,p:9,d:[10,9,10,9,10],
+  h:"RBI raises repo rate by 25 basis points, catching markets off guard",
+  sum:"The Reserve Bank of India raised the repo rate from 6.50% to 6.75% in an unscheduled announcement, ahead of its regular policy review. The governor said core inflation has stayed above target for four months and that waiting would risk higher prices becoming entrenched. Bond yields jumped and bank shares fell within minutes of the announcement.",
+  mean:"Home, car and business loans linked to the repo rate will get costlier within weeks, and deposit rates are likely to rise.",
+  why:"An unscheduled move that reprices loans, bonds and deposits across the economy.",
+  term:["Basis point","One basis point is 0.01 percentage point, so 25 bps is a quarter of a percent."],
+  viz:{k:'spark',cap:"Repo rate, %",s:[6.50,6.50,6.50,6.50,6.75],x:["Mar","Now"],e:"6.75%",d:"+25 bps",step:1}},
+ {r:'IN',t:'fin',src:'Mint',hrs:3,p:6,d:[7,7,8,6,6],
+  h:"Largest private lender reports first profit drop in nine quarters",
+  sum:"India's largest private lender reported net profit of ₹14,840 crore for the quarter, down 18% from the previous quarter and its first fall in nine quarters. The bank set aside sharply more money for loans that may go bad, mainly in unsecured retail lending. Its shares fell 4% in early trade and pulled the banking index lower.",
+  mean:"One bank's provisioning spike is not a sector crisis, but investors will now check other lenders' unsecured loan books.",
+  why:"A sector bellwether and a surprise, but the damage is limited to one lender.",
+  term:["Provisioning","Money a bank sets aside to cover loans that may not be repaid."],
+  viz:{k:'bars',cap:"Net profit by quarter, ₹ crore",l:["Dec","Mar","Jun","Sep"],v:[16400,17200,18100,14840],t:["16.4k","17.2k","18.1k","14.8k"],hi:3}},
+ {r:'IN',t:'fin',src:'Financial Express',hrs:5,p:7,d:[8,7,7,8,8],
+  h:"SEBI tightens futures and options rules for retail traders",
+  sum:"SEBI has raised the minimum contract size for index futures and options from ₹5 lakh to ₹15 lakh and limited weekly expiries to one per exchange. The regulator's own data shows most retail derivative traders lose money, and the rules aim to cut speculative volumes. The changes take effect next month.",
+  mean:"Small traders will need more capital per trade and have fewer short-dated contracts to bet on, so derivative volumes and broker revenues are likely to fall.",
+  why:"Changes how millions of traders operate, and the rules are meant to last.",
+  term:["Expiry","The date on which a derivatives contract ends and must be settled."],
+  viz:{k:'facts',cap:"Index options, new rules",rows:[["Minimum contract","₹15 lakh","was ₹5 lakh"],["Weekly expiries","1 per exchange","was 5"]]}},
+ {r:'IN',t:'fin',src:'Business Standard',hrs:2.5,p:8,d:[8,6,6,6,7],
+  h:"Rupee slides to a fresh low against the dollar as RBI steps in",
+  sum:"The rupee fell to 88.4 per US dollar, a new lifetime low, after foreign investors sold equities and oil prices rose. The RBI was seen selling dollars through state-run banks to slow the slide. Traders say the currency has weakened for six sessions in a row.",
+  mean:"Imports, foreign travel and overseas education get costlier while exporters gain. A weaker rupee also adds to imported inflation.",
+  why:"Raises costs for importers and borrowers, but the fall was widely expected.",
+  viz:{k:'spark',cap:"Rupees per US dollar",s:[86.2,86.5,86.9,87.3,87.9,88.4],x:["6 sessions ago","Now"],e:"88.4",d:"+2.6%"}},
+ {r:'IN',t:'fin',src:'Hindustan Times',hrs:6,p:5,d:[6,5,4,5,4],
+  h:"Gold touches a record high as festive demand meets global uncertainty",
+  sum:"Gold reached ₹78,200 per 10 grams, a record, as buying picked up ahead of the wedding season. Investors have also moved into gold because of uncertainty over global interest rates. Jewellers say higher prices are cutting the quantity customers buy, even as the money they spend rises.",
+  mean:"Gold is now costlier for households, and higher imports could widen the trade deficit.",
+  why:"Notable for households and importers, but driven by familiar factors.",
+  viz:{k:'spark',cap:"Gold, ₹ thousand per 10 g",s:[71.2,72.4,73.1,75.0,76.8,78.2],x:["Sep","Now"],e:"₹78,200",d:"+9.8%"}},
+ {r:'IN',t:'fin',src:'Mint',hrs:4,p:4,d:[5,4,4,3,4],
+  h:"Nifty slips 0.8% as foreign investors trim bank holdings",
+  sum:"The Nifty 50 closed at 24,453, down 0.8%, as foreign institutional investors sold bank shares for a second session. Private banks and financial companies fell the most, while IT and pharma stocks held steady. Trading volumes were close to the monthly average.",
+  mean:"A modest dip driven by foreign selling. Nothing in the day's data changes the market's medium-term outlook.",
+  why:"A routine market move with no change to the outlook.",
+  viz:{k:'spark',cap:"Nifty 50, last six sessions",s:[24610,24640,24650,24630,24648,24453],x:["6 sessions ago","Today"],e:"24,453",d:"−0.8% today"}},
+ {r:'IN',t:'fin',src:'Business Standard',hrs:7,p:2,d:[4,4,2,3,3],
+  h:"Private lender posts 11% rise in quarterly profit, in line with estimates",
+  sum:"A leading private lender reported an 11% rise in quarterly net profit, against analyst estimates of 10.8%. Loan growth was steady, and the share of bad loans was unchanged from the previous quarter. The share price barely moved after the results.",
+  mean:"Results matched expectations, so there is little reason for investors to revise their view of the bank.",
+  why:"Matches expectations, so it adds little new information for markets.",
+  viz:{k:'bars',cap:"Profit growth, % year on year",l:["Estimate","Actual"],v:[10.8,11.0],t:["10.8","11.0"],hi:1}},
+ {r:'IN',t:'fin',src:'Economic Times',hrs:9,p:3,d:[3,3,2,2,4],
+  h:"Three IPOs open this week; grey market premiums stay muted",
+  sum:"Three companies open public issues this week, raising a combined ₹4,200 crore. Unofficial grey market premiums are only 1% to 4% of the issue price, which suggests lukewarm demand. Analysts advise applicants to check valuations against listed peers before bidding.",
+  mean:"A quiet IPO week. Weak grey market premiums point to small or no listing gains.",
+  why:"Of interest to applicants, with little effect beyond them.",
+  viz:{k:'bars',cap:"Grey market premium, % of issue price",l:["IPO A","IPO B","IPO C"],v:[4,2,1],t:["4%","2%","1%"],hi:0}},
+ {r:'IN',t:'eco',src:'The Hindu',hrs:5,p:7,d:[8,6,6,6,5],
+  h:"Economy grows 6.8% in the latest quarter, above forecasts",
+  sum:"The economy grew 6.8% year on year in the latest quarter, above the 6.4% economists expected and the 6.3% of the previous quarter. Manufacturing and services drove the gain, while agriculture was flat. The government said growth is on track to meet its full-year target.",
+  mean:"Growth is running ahead of forecasts, which gives the RBI and the government more room on policy. Weak farm output is the point to watch.",
+  why:"Broad relevance and a modest upside surprise.",
+  viz:{k:'bars',cap:"GDP growth, % year on year",l:["Prev qtr","Forecast","Actual"],v:[6.3,6.4,6.8],t:["6.3","6.4","6.8"],hi:2}},
+ {r:'IN',t:'eco',src:'Indian Express',hrs:8,p:6,d:[8,5,4,4,5],
+  h:"Retail inflation eases to a four-month low as vegetable prices cool",
+  sum:"Retail inflation eased to 4.1% in the latest month, its lowest in four months, as vegetable prices fell after good rain. Core inflation, which excludes food and fuel, stayed near its recent range. Economists expect only a gradual decline through the winter.",
+  mean:"Falling food prices help household budgets, but core inflation is still the number the RBI watches before changing rates.",
+  why:"Widely felt, but the direction was already expected.",
+  viz:{k:'spark',cap:"Retail inflation, % year on year",s:[5.1,4.9,4.6,4.4,4.1],x:["4 months ago","Now"],e:"4.1%",d:"−1.0 pt"}},
+ {r:'IN',t:'eco',src:'The Hindu',hrs:10,p:4,d:[7,6,5,7,6],
+  h:"Cabinet cuts import duty on electronics components",
+  sum:"The Cabinet cut the import duty on electronics components such as display modules and camera parts from 10% to 5%. The change lowers input costs for local phone and appliance assemblers and takes effect on 1 December. Industry groups had asked for the cut to help exports compete.",
+  mean:"Local assemblers get cheaper inputs, which could lower the price of some gadgets and help electronics exports over time.",
+  why:"Meaningful for one industry, with lasting policy impact.",
+  viz:{k:'facts',cap:"Import duty, electronics parts",rows:[["Duty rate","5%","was 10%"],["Takes effect","1 December",""]]}},
+ {r:'IN',t:'pol',src:'Indian Express',hrs:3.5,p:8,d:[9,7,5,10,5],
+  h:"Supreme Court reserves verdict in landmark Centre-state powers case",
+  sum:"A five-judge constitution bench finished hearing arguments over how far the Centre can legislate on subjects where states also have powers. The court reserved its verdict after several weeks of hearings and gave no date for the judgment. The outcome could affect laws on tax, trade and policing.",
+  mean:"Nothing changes today, but the eventual ruling will set the limits of Centre and state powers for years.",
+  why:"The ruling will shape the Centre-state balance for years, though its timing is unknown.",
+  viz:{k:'steps',cap:"Where the case stands",st:[["Hearings","Done"],["Verdict","Reserved"],["Judgment","No date"]],cur:1}},
+ {r:'IN',t:'pol',src:'Hindustan Times',hrs:6.5,p:6,d:[6,4,3,4,3],
+  h:"Opposition stalls Parliament for a third day over delimitation",
+  sum:"Both houses were adjourned repeatedly for a third day as opposition members demanded a debate on delimitation of constituencies. The government says it will discuss the subject next week, but not under the rule the opposition wants. Three of the first five sitting days have been lost to disruption.",
+  mean:"The standoff delays pending bills. No decision on delimitation has been taken.",
+  why:"Ongoing, with no decision made yet.",
+  viz:{k:'dots',cap:"Sitting days lost to disruption",total:5,fill:3,label:"3 of 5"}},
+ {r:'IN',t:'pol',src:'Times of India',hrs:11,p:5,d:[3,3,3,2,2],
+  h:"Bypolls: ruling party retains two of three assembly seats",
+  sum:"The ruling party kept two of the three assembly seats at stake, winning one of them by a narrow margin. A regional party won the third seat, which the ruling party had held. Turnout was lower than in the last general election.",
+  mean:"The results leave the balance of power in all three state assemblies unchanged.",
+  why:"Local results that leave the balance of power unchanged.",
+  viz:{k:'split',cap:"Seats won, three contested",big:"2 of 3",parts:[["Ruling party",2],["Regional party",1]]}},
+ {r:'IN',t:'bus',src:'Business Standard',hrs:12,p:5,d:[6,7,4,8,4],
+  h:"Conglomerate commits ₹40,000 crore to chip assembly plant",
+  sum:"A large conglomerate will invest ₹40,000 crore in a plant that assembles and tests chips, with production expected to start in about three years. The company expects to create around 20,000 jobs. The project depends on government subsidy approvals and on securing technology partners.",
+  mean:"A long-term bet that could cut India's reliance on imported chips, but it will not affect supply for several years.",
+  why:"A large, long-horizon investment in a strategic sector.",
+  viz:{k:'facts',cap:"Chip assembly plant",rows:[["Investment","₹40,000 crore",""],["Jobs expected","~20,000",""],["Output starts","~3 years",""]]}},
+ {r:'IN',t:'bus',src:'Hindustan Times',hrs:2,p:6,d:[5,5,7,2,6],
+  h:"Airline cancels 140 flights after check-in software outage",
+  sum:"An airline cancelled 140 flights, roughly one in seven of its daily schedule, after an outage in its check-in software. Passengers faced long queues at major airports while staff checked in travellers by hand. The airline says systems are being restored in phases and it will offer refunds or free rebooking.",
+  mean:"The disruption is costly for the airline and passengers today, but should be resolved within a day or two.",
+  why:"Disruptive today, and short-lived.",
+  viz:{k:'split',cap:"Flights today, about 1,000 scheduled",big:"140 cancelled",parts:[["Cancelled",140],["Operated",860]]}},
+ {r:'IN',t:'bus',src:'Mint',hrs:14,p:2,d:[2,3,4,2,2],
+  h:"Start-up founder steps down months after funding round",
+  sum:"The founder of a funded start-up has stepped down as chief executive months after the company raised a new round. A co-founder will lead the company while the board searches for a permanent CEO. The company says its product plans and funding are unaffected.",
+  mean:"A leadership change at one company with no wider effect. Watch whether other senior executives leave.",
+  why:"Company-specific, with little wider effect.",
+  viz:{k:'steps',cap:"Sequence of events",st:[["Funding round","Closed"],["CEO steps down","Today"],["Board search","Next"]],cur:1}},
+ {r:'IN',t:'tech',src:'Financial Express',hrs:4.5,p:5,d:[8,6,3,7,6],
+  h:"UPI hits record monthly volume as new fraud checks begin",
+  sum:"UPI processed 17.8 billion transactions last month, a record, helped by festive spending. From next week banks will add extra verification for high-value transfers to cut fraud. The payments body says the checks should add only a few seconds.",
+  mean:"Digital payments keep growing, and users may see extra prompts on large transfers.",
+  why:"Touches most digital payment users, and the fraud rules will persist.",
+  viz:{k:'bars',cap:"UPI transactions, billion per month",l:["Jun","Jul","Aug","Sep","Oct"],v:[16.1,16.4,16.7,17.0,17.8],t:["16.1","16.4","16.7","17.0","17.8"],hi:4}},
+ {r:'IN',t:'tech',src:'Times of India',hrs:16,p:3,d:[2,2,3,2,2],
+  h:"Smartphone maker launches mid-range model with satellite messaging",
+  sum:"A smartphone maker launched a mid-range phone priced between ₹20,000 and ₹25,000 that can send short messages by satellite when there is no mobile signal. It goes on sale next month. Reviewers say the other specifications are similar to rival phones at that price.",
+  mean:"A feature launch for phone buyers. It does not change the market.",
+  why:"A product launch with a narrow audience.",
+  viz:{k:'facts',cap:"New phone",rows:[["Price","₹20–25k",""],["Standout feature","Satellite SMS",""],["On sale","Next month",""]]}},
+ {r:'IN',t:'sci',src:'The Hindu',hrs:18,p:4,d:[5,5,3,6,3],
+  h:"ISRO completes key engine test for crewed mission; schedule unchanged",
+  sum:"ISRO completed a key test of the engine for its crewed spacecraft, and all performance targets were met. The agency says the first uncrewed test flight remains on schedule. The crewed flight itself is still some time away.",
+  mean:"Steady progress on the human spaceflight programme, with no change to the timeline.",
+  why:"Progress on a long programme, with no change to the plan.",
+  viz:{k:'steps',cap:"Programme milestones",st:[["Engine test","Done"],["Uncrewed flight","On track"],["Crewed flight","Later"]],cur:1}},
+ {r:'IN',t:'arts',src:'Indian Express',hrs:20,p:4,d:[4,3,4,3,2],
+  h:"Regional cinema sweeps top categories at national film awards",
+  sum:"Films in Malayalam, Marathi and Assamese won nine of the twelve top categories at the national film awards, while Hindi films won three. Jury members praised the writing and cinematography of smaller productions. Several winners are now expected to get wider releases.",
+  mean:"Regional-language cinema dominated this year, which could help those films find larger audiences.",
+  why:"Cultural interest with limited wider effect.",
+  viz:{k:'split',cap:"Top awards by film language",big:"9 of 12",parts:[["Regional languages",9],["Hindi",3]]}},
+ {r:'IN',t:'arts',src:'The Hindu',hrs:22,p:2,d:[3,3,2,5,2],
+  h:"Restored Ajanta mural section reopens to visitors after six years",
+  sum:"A section of the Ajanta cave murals reopened to visitors after six years of conservation work. Conservators used non-invasive cleaning to remove centuries of grime without damaging the pigments. Entry will be capped at 500 visitors a day to protect the paintings.",
+  mean:"A heritage success for a small audience, and the visitor cap will limit access.",
+  why:"A lasting heritage gain for a small audience.",
+  viz:{k:'facts',cap:"Ajanta reopening",rows:[["Closed for","6 years",""],["Daily visitor cap","500",""]]}},
+ {r:'IN',t:'lit',src:'Indian Express',hrs:19,p:3,d:[2,2,3,3,1],
+  h:"Indian author's novel wins international translation prize",
+  sum:"An Indian author's novel, translated from a regional language, won an international translation prize chosen from a shortlist of six books. The jury praised the translator for keeping the rhythm and idiom of the original. The prize money is shared between author and translator.",
+  mean:"A boost for translated Indian fiction and for the writer's readership abroad.",
+  why:"A literary honour of interest to readers.",
+  viz:{k:'facts',cap:"The prize",rows:[["Shortlist","6 books",""],["Judged for","Translation",""],["Prize money","Shared",""]]}},
+ {r:'IN',t:'spo',src:'Times of India',hrs:8,p:6,d:[6,3,3,2,1],
+  h:"India seal T20 series with six-wicket win in Chennai",
+  sum:"India won the fourth T20 in Chennai by six wickets with eight balls to spare, taking an unbeatable 3–1 lead in the five-match series. The opener's fifty and tight bowling at the end of the innings decided the match. The final game will be played on Sunday.",
+  mean:"India win the series with one match left to play.",
+  why:"A result with no consequence beyond the series.",
+  viz:{k:'facts',cap:"Fourth T20, Chennai",rows:[["Result","India by 6 wkts",""],["Series","3–1",""],["Balls to spare","8",""]]}},
+ {r:'GL',t:'fin',src:'Reuters',hrs:5,p:12,d:[10,6,3,8,7],
+  h:"Federal Reserve holds rates, signals a slower pace of cuts",
+  sum:"The US Federal Reserve left its policy rate at 4.50% and said it expects to cut more slowly than markets hoped. Officials cited strong hiring and inflation that is still above their 2% target. Markets had largely expected a hold, so the reaction was muted.",
+  mean:"US borrowing costs stay high for longer, which supports the dollar and can pressure emerging-market currencies such as the rupee.",
+  why:"Global reach, and mostly in line with what traders had priced in.",
+  term:["Priced in","Already reflected in market prices because most traders expected it."],
+  viz:{k:'spark',cap:"Fed policy rate, upper bound %",s:[5.50,5.25,5.00,4.75,4.50,4.50],x:["Jan","Now"],e:"4.50%",d:"Held",step:1}},
+ {r:'GL',t:'fin',src:'Financial Times',hrs:3,p:9,d:[9,8,8,6,7],
+  h:"Ten-year Treasury yield jumps 20 bps in a day on strong jobs data",
+  sum:"The yield on the ten-year US Treasury rose 20 basis points to 4.41% after a jobs report showed far more hiring than economists expected. Bond prices fell, and the dollar strengthened against most major currencies. Traders pushed back their expectations for the next Fed rate cut.",
+  mean:"Stronger US jobs mean rates may stay higher for longer, raising borrowing costs globally and weighing on Indian stocks and the rupee.",
+  why:"A large single-day move that feeds into borrowing costs worldwide.",
+  viz:{k:'spark',cap:"US 10-year yield, %",s:[4.19,4.20,4.22,4.21,4.41],x:["4 days ago","Today"],e:"4.41%",d:"+20 bps today"}},
+ {r:'GL',t:'fin',src:'Bloomberg',hrs:7,p:8,d:[8,7,6,6,6],
+  h:"Oil falls 4% as major producers agree to raise output",
+  sum:"Brent crude fell 4% to $73.80 a barrel after major oil producers agreed to raise output quotas from next month. It is the lowest level in seven weeks. Analysts say the extra supply could keep prices soft if global demand growth stays weak.",
+  mean:"Cheaper oil lowers inflation and the import bill for countries like India, but it cuts oil producers' revenues.",
+  why:"Matters for inflation and for oil importers such as India.",
+  viz:{k:'spark',cap:"Brent crude, $ per barrel",s:[78.4,77.9,77.6,76.9,73.8],x:["4 days ago","Today"],e:"$73.80",d:"−4% today"}},
+ {r:'GL',t:'fin',src:'Financial Times',hrs:9,p:6,d:[8,8,7,7,7],
+  h:"Major economy's credit rating cut one notch; bonds sell off",
+  sum:"A major credit rating agency cut a large economy's sovereign rating one notch, from AA+ to AA, citing rising debt and weak budget plans. Government bond yields rose as investors sold, and the currency weakened. The agency kept the outlook negative, signalling a further cut is possible.",
+  mean:"The government will pay more to borrow, and investors may demand higher returns on its bonds for some time.",
+  why:"A broad, lasting signal about sovereign risk.",
+  viz:{k:'facts',cap:"Sovereign credit rating",rows:[["New rating","AA","was AA+"],["Outlook","Negative",""]]}},
+ {r:'GL',t:'pol',src:'The Guardian',hrs:13,p:7,d:[8,6,5,8,5],
+  h:"G20 leaders agree draft deal on minimum tax for ultra-rich",
+  sum:"G20 leaders agreed a draft framework for a 2% annual minimum tax on the wealth of individuals with a net worth above $1 billion. The text still needs approval from national governments, and several have not committed. Supporters say it would raise revenue from the very rich, while critics warn it may be hard to enforce.",
+  mean:"A symbolic step with no immediate effect. Real impact depends on whether countries pass it into law.",
+  why:"A significant policy step that is still some way from taking effect.",
+  viz:{k:'facts',cap:"Draft G20 proposal",rows:[["Tax rate","2% a year","on net wealth"],["Applies to","Over $1 bn",""],["Status","Draft","needs national approval"]]}},
+ {r:'GL',t:'bus',src:'Financial Times',hrs:10,p:6,d:[6,7,6,7,4],
+  h:"Two European banks agree merger to form region's third-largest lender",
+  sum:"Two European banks agreed an all-share merger that would create the region's third-largest lender, with about €1.1 trillion in assets. The banks expect to cut several thousand jobs and save costs. The deal needs approval from regulators and shareholders, which could take up to a year.",
+  mean:"A bigger rival in Europe's banking market, with job losses ahead if regulators agree.",
+  why:"A large deal for one region's banking sector.",
+  viz:{k:'bars',cap:"Total assets, € trillion",l:["Bank A","Bank B","Combined"],v:[0.6,0.5,1.1],t:["0.6","0.5","1.1"],hi:2}},
+ {r:'GL',t:'tech',src:'Reuters',hrs:15,p:7,d:[6,5,4,5,4],
+  h:"Chipmaker beats estimates on AI data-centre demand",
+  sum:"A leading chipmaker reported revenue of $25.1 billion, up 36% from a year ago and above analysts' estimate of $24.2 billion. Demand from AI data centres drove most of the growth. The company also raised its forecast for the coming quarter.",
+  mean:"AI-related spending is still strong, which supports chip stocks and the companies that buy their products.",
+  why:"Strong numbers, but a continuation of an existing trend.",
+  viz:{k:'bars',cap:"Quarterly revenue, $ billion",l:["Year ago","Estimate","Actual"],v:[18.4,24.2,25.1],t:["18.4","24.2","25.1"],hi:2}},
+ {r:'GL',t:'sci',src:'BBC News',hrs:17,p:3,d:[5,5,4,6,3],
+  h:"Lab tests show new battery chemistry lasting 40% longer",
+  sum:"Researchers reported a new battery chemistry that kept 80% of its capacity through 1,400 charge cycles in lab tests, against about 1,000 for current designs. That is an increase of 40%. The team says making it at factory scale will take years and has not yet been tested.",
+  mean:"Longer-lasting batteries could cut costs for phones and electric cars, but not any time soon.",
+  why:"Promising, but still at an early stage.",
+  viz:{k:'bars',cap:"Charge cycles to 80% capacity",l:["Today","New"],v:[1000,1400],t:["1,000","1,400"],hi:1}},
+ {r:'GL',t:'arts',src:'The Guardian',hrs:21,p:2,d:[1,1,3,2,1],
+  h:"Venice Biennale names curator for next edition",
+  sum:"The organisers of the Venice Biennale named the curator for the 2028 art exhibition. The curator has run exhibitions at several major museums. More details about the theme will be announced later next year.",
+  mean:"Routine news for the art world. The theme and artists will come later.",
+  why:"An expected appointment of interest to the art world.",
+  viz:{k:'facts',cap:"Next Biennale",rows:[["Edition","2028",""],["Curator","Named","theme to follow"]]}},
+ {r:'GL',t:'lit',src:'The New York Times',hrs:23,p:3,d:[1,2,4,3,1],
+  h:"Posthumous collection from celebrated poet is published",
+  sum:"A posthumous collection by a celebrated poet has been published, with 64 poems, 41 of which have not appeared before. The poems were found among the writer's papers and edited by the poet's literary executor. Critics describe the book as an intimate late work.",
+  mean:"A significant publication for poetry readers, adding new work to the poet's body of writing.",
+  why:"A notable publication for readers of poetry.",
+  viz:{k:'facts',cap:"The collection",rows:[["Poems","64",""],["Never published","41",""]]}},
+ {r:'IN',t:'bank',src:'Moneycontrol',hrs:4.2,p:4,d:[6,5,6,6,5],img:'bank',tg:['fin','gm'],
+  h:"Insurance regulator proposes cap on agent commissions to lower premiums",
+  sum:"The insurance regulator has proposed limiting agent commissions to 25% of the first-year premium, down from as much as 40% on some policies. It says high commissions push up premiums and encourage mis-selling. Insurers and agent bodies have 30 days to respond.",
+  mean:"If adopted, premiums could fall and insurers' distribution costs would drop, but agents' earnings and sales push may weaken.",
+  why:"Changes costs across the insurance sector, but it is still only a proposal.",
+  lens:{fin:"Lower commissions raise insurers' margins but could slow new policy growth. Watch value of new business and agency-channel share.",gm:"A regulator reshaping a distribution model is a useful case on how policy changes industry economics."},
+  viz:{k:'facts',cap:"Proposed commission cap",rows:[["Cap on first-year premium","25%","was up to 40%"],["Comment period","30 days",""]]}},
+ {r:'IN',t:'start',src:'Economic Times',hrs:5.5,p:3,d:[3,4,4,3,3],img:'bulb',tg:['fin','mkt','gm'],
+  h:"Fintech start-up raises $120 million at a $1.1 billion valuation",
+  sum:"A payments and lending start-up raised $120 million in a round led by a global growth fund, valuing it at $1.1 billion. It plans to spend the money on credit products for small businesses and on hiring. It is the third start-up to reach unicorn status this year.",
+  mean:"Funding is flowing again to fintech companies with clear revenue, though investors now want profit plans, not just growth.",
+  why:"Notable for the start-up ecosystem, with limited reach beyond it.",
+  lens:{fin:"Check unit economics: take rate, credit losses and the path to profit decide whether a $1.1 billion valuation holds.",mkt:"Look at how the company wins small-business customers. Low-cost distribution is its real advantage."},
+  viz:{k:'facts',cap:"Funding round",rows:[["Raised","$120 million",""],["Valuation","$1.1 billion",""],["Use of funds","SME credit, hiring",""]]}},
+ {r:'IN',t:'fmcg',src:'Business Standard',hrs:2.8,p:7,d:[7,5,5,5,6],img:'shelf',tg:['mkt','ops','gm'],
+  h:"Rural FMCG volumes grow 6.2%, outpacing cities for a fifth straight quarter",
+  sum:"Packaged goods volumes in rural India rose 6.2% year on year, against 4.1% in urban areas. Good monsoon rains, higher farm incomes and wider distribution in small towns helped. Companies say small, low-priced packs are selling best.",
+  mean:"Growth in everyday consumer goods now comes from villages and small towns, so brands that rely on big cities are growing more slowly.",
+  why:"A broad consumer signal that changes where companies invest, and the trend is lasting.",
+  lens:{mkt:"Shift trade promotion and small-pack launches toward rural distribution, and test regional-language campaigns. Urban premiumisation matters less this quarter.",ops:"Rural growth stretches distribution: more outlets, smaller drops and tighter stock planning for low-value packs.",gm:"The growth market has moved, so a portfolio built for urban shoppers needs rebalancing."},
+  viz:{k:'bars',cap:"FMCG volume growth, % year on year",l:["Urban","Rural"],v:[4.1,6.2],t:["4.1","6.2"],hi:1}},
+ {r:'IN',t:'fmcg',src:'Mint',hrs:6.8,p:5,d:[5,4,5,6,5],img:'cart',tg:['mkt','ops'],
+  h:"Quick-commerce apps cut delivery to 10 minutes in 24 smaller cities",
+  sum:"Three quick-commerce apps have opened small local warehouses in 24 smaller cities, cutting average delivery from 18 minutes to 10. They are offering heavy discounts to win first-time users. Analysts say the model still loses money on each order outside the biggest cities.",
+  mean:"Fast delivery is reaching smaller cities, which gives shoppers convenience but puts pressure on local stores and on the apps' profits.",
+  why:"A meaningful shift in retail, though profitability is unproven.",
+  lens:{mkt:"Brands need quick-commerce-ready packs, shelf visibility on the apps and pricing that survives app discounts.",ops:"Dark stores, inventory placement and rider supply decide whether 10-minute delivery works outside the metros."},
+  viz:{k:'facts',cap:"Quick commerce, smaller cities",rows:[["Delivery time","10 min","was 18 min"],["New cities","24",""]]}},
+ {r:'IN',t:'mkt',src:'Business Today',hrs:3.3,p:4,d:[6,5,5,6,6],img:'billboard',tg:['mkt'],
+  h:"Advertisers shift festive budgets to short video and creator campaigns",
+  sum:"Brands have put 54% of their festive-season ad spend into digital channels, with short video and creator partnerships growing fastest. Television's share fell to 28% and print to 12%. Agencies say creator content is cheaper and easier to measure.",
+  mean:"Advertising money is moving to online video and creators, so traditional media faces falling revenue while measurable results matter more.",
+  why:"A clear, lasting shift for the advertising industry.",
+  lens:{mkt:"Plan budgets around measurable short-video and creator campaigns, and keep TV for reach and brand-building. Track cost per result, not just views."},
+  viz:{k:'bars',cap:"Festive ad spend share, %",l:["Digital","TV","Print","Other"],v:[54,28,12,6],t:["54%","28%","12%","6%"],hi:0}},
+ {r:'IN',t:'mkt',src:'The Hindu',hrs:13,p:4,d:[5,4,5,7,7],img:'phone',tg:['mkt','gm'],
+  h:"Ad regulator orders brands to disclose paid influencer promotions",
+  sum:"The advertising regulator has ordered brands and influencers to label paid promotions clearly, with penalties of up to ₹10 lakh for repeat violations. The rule covers posts, videos and live streams. Several brands say they are rewriting their influencer contracts.",
+  mean:"Influencer marketing becomes more transparent, which protects consumers and raises compliance costs for brands.",
+  why:"Changes how brands advertise, and the rule is binding.",
+  lens:{mkt:"Update influencer briefs and contracts to require clear disclosure, and expect campaign costs to rise slightly. Creators with real audience trust gain.",gm:"A governance point: brand risk now includes the conduct of paid creators."},
+  viz:{k:'facts',cap:"New disclosure rule",rows:[["Applies to","Paid promotions",""],["Penalty","Up to ₹10 lakh","repeat violations"]]}},
+ {r:'IN',t:'auto',src:'Hindu BusinessLine',hrs:9.5,p:5,d:[6,6,4,7,5],img:'car',tg:['ops','mkt','gm'],
+  h:"Electric two-wheeler sales hit a record as battery prices fall",
+  sum:"Electric two-wheeler registrations reached 93,000 units last month, up from 62,000 in June. Lower battery costs let makers cut prices by about 8%, and new models are arriving in smaller cities. Charging stations remain scarce outside large cities.",
+  mean:"Electric scooters are becoming a mainstream purchase, which will squeeze petrol two-wheeler sales over time.",
+  why:"A durable shift in a large market, driven by costs.",
+  lens:{ops:"Battery sourcing, service networks and charging access are the bottlenecks as volumes scale.",mkt:"Price cuts and financing offers drive adoption. Positioning around running cost per kilometre works best.",gm:"A textbook case of a falling cost curve opening a mass market while incumbents come under pressure."},
+  viz:{k:'bars',cap:"Electric two-wheeler sales, thousand units",l:["Jun","Jul","Aug","Sep","Oct"],v:[62,68,71,79,93],t:["62","68","71","79","93"],hi:4}},
+ {r:'IN',t:'real',src:'Business Standard',hrs:15,p:4,d:[5,4,4,5,4],img:'house',tg:['fin','gm'],
+  h:"Housing sales in top cities rise 9% while new launches slow",
+  sum:"Sales in the seven largest cities rose 9% year on year to 108,000 units in the quarter, while new project launches fell to 92,000. Developers are holding back launches because unsold stock in some cities is still high. Prices rose about 6% on average.",
+  mean:"Demand for homes is steady, but fewer launches mean prices may keep rising, which keeps affordability a problem.",
+  why:"Relevant to buyers and lenders, but a gradual trend.",
+  lens:{fin:"Steady sales and fewer launches support developer cash flows. Higher rates could hit affordability and home-loan growth.",gm:"Supply discipline by developers shows how an industry protects pricing."},
+  viz:{k:'bars',cap:"Top-seven-city housing, thousand units",l:["Launches","Sales"],v:[92,108],t:["92","108"],hi:1}},
+ {r:'IN',t:'energy',src:'Indian Express',hrs:12.6,p:5,d:[6,6,4,8,4],img:'bulb',tg:['ops','gm'],
+  h:"Solar capacity additions double in the first half, but grid storage lags",
+  sum:"India added 14.2 GW of solar capacity in the first half of the year, roughly double the same period last year, along with 2.1 GW of wind. Only 0.8 GW of storage came online, so some solar power is wasted at midday. Officials plan auctions for battery storage.",
+  mean:"Solar is growing fast, but without storage the grid cannot use all of it, which limits how quickly coal can be replaced.",
+  why:"Large and lasting for the energy sector, with a known bottleneck.",
+  lens:{ops:"Factories can cut power costs with solar contracts but must plan around midday-heavy supply and demand charges.",gm:"Storage is the investment gap to watch, because it decides who captures the value from cheap solar."},
+  viz:{k:'bars',cap:"Capacity added, first half, GW",l:["Solar","Wind","Storage"],v:[14.2,2.1,0.8],t:["14.2","2.1","0.8"],hi:0}},
+ {r:'IN',t:'agri',src:'The Tribune',hrs:17.5,p:3,d:[6,4,3,5,4],img:'wheat',tg:['ops'],
+  h:"Wheat sowing begins early on good soil moisture; MSP rise expected",
+  sum:"Farmers in the northern plains have started sowing wheat earlier than usual because soil moisture is good after late rains. The government is expected to announce a higher minimum support price this month. Fertiliser supplies are adequate for now.",
+  mean:"A good start to the wheat season supports supply and food prices, and a higher support price raises farm incomes.",
+  why:"Important for food prices, but the outcome depends on later weather.",
+  lens:{ops:"Early sowing points to adequate grain supply next year, so food processors can plan procurement and contracts earlier."},
+  viz:{k:'facts',cap:"Wheat season",rows:[["Sowing","Early","good soil moisture"],["MSP decision","Expected","this month"]]}},
+ {r:'IN',t:'jobs',src:'Mint',hrs:5.9,p:4,d:[5,4,4,5,5],img:'people',tg:['hr','fin','mkt','gm'],
+  h:"B-schools report 8% higher average campus offers; banking and consulting lead",
+  sum:"The average campus offer at leading management schools rose 8% to ₹26.6 lakh a year. Banking, financial services and consulting recruiters made the most offers, while FMCG and e-commerce hiring was steady. Schools say recruiters are asking for analytics skills.",
+  mean:"Management graduates are still in demand, and data and analytics skills are what recruiters are adding to their requirements.",
+  why:"Relevant to students and recruiters, with limited reach beyond them.",
+  lens:{fin:"BFSI and consulting are the largest recruiters. Strengthen valuation, credit and data skills to stand out.",mkt:"FMCG and e-commerce hiring is steady. Add analytics and digital marketing to your profile.",hr:"Campus hiring trends show where employers compete for talent, a useful input for compensation benchmarking.",gm:"Consulting and BFSI lead the offers, so show structured problem-solving and analytics."},
+  viz:{k:'bars',cap:"Average campus offer, ₹ lakh",l:["Last year","This year"],v:[24.6,26.6],t:["24.6","26.6"],hi:1}},
+ {r:'IN',t:'jobs',src:'Economic Times',hrs:8.9,p:8,d:[8,6,6,8,8],img:'people',tg:['hr','ops','gm'],
+  h:"New labour codes take effect: four-day week allowed, overtime rules tightened",
+  sum:"The four labour codes come into force on 1 January. Employers may offer a four-day week with up to 12-hour shifts if workers agree, and overtime must be paid at twice the normal rate. Contract workers get social security benefits and gratuity after one year.",
+  mean:"Employers will need to revise contracts, leave and overtime policies, and workers get more benefits and flexibility.",
+  why:"Affects every employer and employee, and the rules are permanent.",
+  lens:{hr:"Review leave, overtime and contract policies before the effective date, and decide whether to offer a four-day week. Payroll cost will rise.",ops:"Shift planning and overtime costs change, so factories running long shifts must rework their rosters.",gm:"Labour-cost assumptions in business plans need to be updated."},
+  viz:{k:'facts',cap:"New labour codes",rows:[["Work week","4 days allowed","12-hour shifts"],["Overtime pay","2x",""],["Effective","1 January",""]]}},
+ {r:'IN',t:'edu',src:'Deccan Herald',hrs:19.5,p:3,d:[6,4,4,6,5],img:'cap',tg:['hr','gm'],
+  h:"UGC proposes twice-a-year admissions for universities from next session",
+  sum:"The University Grants Commission has proposed that universities admit students twice a year, in July and January, from the next academic session. It says this gives students who miss one cycle a second chance. Universities will need to expand staff and classroom capacity.",
+  mean:"Students get a second chance at admission, and universities must plan for two intakes a year.",
+  why:"Changes the admissions calendar for millions of students.",
+  lens:{hr:"Two intakes mean more faculty hiring and a longer placement calendar. Campus recruiters should plan for two batches.",gm:"A capacity-planning question for universities: more intakes need more teachers and space."},
+  viz:{k:'facts',cap:"Admission cycles",rows:[["Intakes a year","2","was 1"],["From","Next session",""]]}},
+ {r:'IN',t:'health',src:'NDTV',hrs:10.8,p:5,d:[7,5,4,6,5],img:'health',tg:['gm','ops'],
+  h:"Health ministry caps prices of 30 essential medicines",
+  sum:"The government has put price ceilings on 30 essential medicines, including drugs for diabetes and heart disease. Prices fall by 18% on average. Drugmakers say margins will be squeezed on older products.",
+  mean:"Patients will pay less for common medicines, and drugmakers earn less on those products.",
+  why:"Affects many households and the pharma industry, and the caps are binding.",
+  lens:{gm:"Price controls show the trade-off between access and industry margins. Pharma firms will respond by shifting to newer, uncapped products.",ops:"Lower prices on staples push manufacturers to cut costs and rationalise product lines."},
+  viz:{k:'facts',cap:"Price caps",rows:[["Medicines covered","30",""],["Average price cut","18%",""]]}},
+ {r:'IN',t:'law',src:'Business Standard',hrs:14.6,p:5,d:[6,6,5,7,6],img:'scales',tg:['mkt','gm','ops'],
+  h:"Competition regulator fines e-commerce firm ₹1,100 crore over preferred sellers",
+  sum:"The Competition Commission fined an e-commerce company ₹1,100 crore for favouring a small group of sellers on its platform. It ordered the company to change its ranking and discount practices within 90 days. The company says it will appeal.",
+  mean:"Online marketplaces must treat sellers more evenly, which could change how products are ranked and priced.",
+  why:"A large penalty and a rule change for a major platform.",
+  lens:{mkt:"Brand sellers may see fairer search ranking and fewer platform-driven price cuts, so rethink marketplace advertising spend.",ops:"Marketplace sellers should review dependence on one platform and keep other distribution options open.",gm:"Antitrust risk is part of platform strategy, and favouring some sellers can be costly."},
+  viz:{k:'facts',cap:"Competition ruling",rows:[["Penalty","₹1,100 crore",""],["Issue","Preferred sellers",""],["Compliance deadline","90 days",""]]}},
+ {r:'GL',t:'world',src:'Washington Post',hrs:11.5,p:9,d:[8,6,5,5,6],img:'globe',tg:['fin','ops','gm'],
+  h:"US and EU extend tariff truce by 90 days as talks continue",
+  sum:"The United States and the European Union agreed to extend their tariff truce by 90 days. Both sides say progress was made on steel and farm products, but a final deal is still pending. Exporters had warned of higher duties if talks failed.",
+  mean:"A trade dispute is postponed rather than ended, so companies still face uncertainty about future tariffs.",
+  why:"Wide trade impact, but only a delay of a decision.",
+  lens:{fin:"Trade uncertainty shows up in currency and export-sector valuations. A failed deal would hit European and Asian exporters.",ops:"Keep tariff scenarios in supply-chain plans, because re-routing and inventory buffers are cheaper than disruption.",gm:"A case on trade-policy risk in global strategy."},
+  viz:{k:'steps',cap:"Tariff truce",st:[["Truce signed","Done"],["Extended","90 days"],["Final deal","Pending"]],cur:1}},
+ {r:'IN',t:'ent',src:'The Telegraph',hrs:21.6,p:3,d:[4,3,4,4,5],img:'film',tg:['mkt'],
+  h:"Streaming platform lifts India subscription prices as its ad tier grows",
+  sum:"A global streaming service raised its monthly price in India from ₹149 to ₹199 and kept a cheaper ad-supported tier at ₹99. The company said the ad tier now accounts for a growing share of new sign-ups. Rivals are expected to follow with price rises.",
+  mean:"Streaming is getting costlier for viewers, and platforms are leaning on advertising to make money.",
+  why:"Affects subscribers and advertisers, but only one platform.",
+  lens:{mkt:"Pricing tiers and ad-supported plans are a live case of price discrimination, and advertisers get a growing audience to target."},
+  viz:{k:'facts',cap:"Subscription price per month",rows:[["Standard plan","₹199","was ₹149"],["Ad-supported tier","₹99",""]]}},
+ {r:'IN',t:'bus',src:'Hindu BusinessLine',hrs:7.8,p:4,d:[6,5,5,5,6],img:'truck',tg:['ops','fin'],
+  h:"Port congestion eases as container dwell time falls to a four-day low",
+  sum:"Containers are now spending an average of four days at major ports, down from 6.2 days in August. Faster customs clearance and new rail links helped. Shippers say freight rates remain high on some routes.",
+  mean:"Goods move faster through ports, which lowers inventory costs and delays for importers and exporters.",
+  why:"Useful for trade and logistics, and the gains are likely to last.",
+  lens:{ops:"Shorter dwell times cut inventory carrying costs, so revisit safety stock and lead-time assumptions.",fin:"Better logistics support export-sector earnings and lower working-capital needs."},
+  viz:{k:'spark',cap:"Container dwell time, days",s:[6.2,5.8,5.2,4.6,4.0],x:["Aug","Now"],e:"4.0 days",d:"−2.2 days"}},
+ {r:'GL',t:'fin',src:'CNBC',hrs:4.5,p:6,d:[8,5,4,4,5],img:'candles',tg:['fin'],
+  h:"S&P 500 ends at a record as earnings season surprises to the upside",
+  sum:"The S&P 500 rose 0.8% to a record close of 6,010 after most large companies beat profit estimates. Technology and financial shares led the gain. Investors are now waiting for central bank signals on rates.",
+  mean:"US markets are strong because company profits are strong, though high valuations leave little room for disappointment.",
+  why:"A widely watched benchmark, rising for expected reasons.",
+  lens:{fin:"Records driven by earnings are more durable than those driven only by higher multiples. Compare earnings growth with valuation."},
+  viz:{k:'spark',cap:"S&P 500 index",s:[5880,5905,5912,5960,6010],x:["4 days ago","Today"],e:"6,010",d:"+0.8% today"}},
+ {r:'GL',t:'auto',src:'Nikkei Asia',hrs:12.2,p:4,d:[6,6,5,7,4],img:'factory',tg:['ops','gm'],
+  h:"Automakers shift EV battery plants to Southeast Asia",
+  sum:"Four car makers have announced new battery plants in Southeast Asia worth a combined $9 billion. They cite lower labour costs, access to nickel and trade deals with Europe and the United States. China's share of global battery output may slip as a result.",
+  mean:"Battery manufacturing is spreading beyond China, which could reduce supply-chain risk and shift jobs and investment.",
+  why:"A big supply-chain shift that will last for years.",
+  lens:{ops:"Dual sourcing outside a single country is becoming standard in battery supply chains.",gm:"A strategy example of the China-plus-one approach to manufacturing."},
+  viz:{k:'facts',cap:"EV battery plants",rows:[["New plants","4",""],["Region","Southeast Asia",""],["Investment","$9 billion",""]]}},
+ {r:'GL',t:'tech',src:'The Economist',hrs:6.1,p:7,d:[8,7,5,7,5],img:'chip',tg:['ana','fin','gm'],
+  h:"Big tech commits record spending on AI data centres",
+  sum:"The largest technology companies plan to spend about $230 billion on data centres this year, up from $150 billion last year, and expect $310 billion next year. Most of it goes on chips, power and cooling. Investors worry about when the returns will arrive.",
+  mean:"AI is driving a huge investment boom in chips, energy and buildings, with a risk that spending outruns revenue.",
+  why:"Very large sums with effects across chips, power and markets.",
+  lens:{ana:"AI workloads need data-centre capacity, so data teams should watch cloud costs and model-efficiency trends.",fin:"Capex on this scale supports chip and power-equipment demand. The risk is that returns disappoint.",gm:"A classic investment-cycle question: when does capacity outrun demand?"},
+  viz:{k:'bars',cap:"Big-tech AI data-centre spending, $ billion",l:["Last year","This year","Next year"],v:[150,230,310],t:["150","230","310"],hi:1}}
+];
+
+const META=[
+ {img:'bank',tg:['fin','mkt','ops'],lens:{fin:"Expect bond yields and bank margins to reprice. Banks, housing finance companies and NBFCs react first, so watch their net interest margins.",mkt:"Costlier EMIs cool demand for big-ticket purchases, so autos, appliances and housing brands will lean on discounts and zero-cost EMI offers.",ops:"Working-capital loans get costlier, so firms will push to cut inventory and collect payments faster."}},
+ {img:'bank',t:'bank',tg:['fin','gm'],lens:{fin:"Look at gross NPA, credit cost and net interest margin in the results. Rising unsecured-loan provisions can signal wider stress.",gm:"A risk-management lesson: fast retail loan growth needs matching credit controls."}},
+ {img:'candles',tg:['fin','ana'],lens:{fin:"Expect lower derivative volumes and weaker earnings for brokers and exchanges. This is a regulatory-risk case for capital-market stocks.",ana:"Volume and retail participation data will show whether traders move from options to cash equities."}},
+ {img:'coins',tg:['fin','ops'],lens:{fin:"A weaker rupee raises hedging costs and hits import-heavy earnings. Track RBI reserves and forward premiums.",ops:"Imported inputs cost more, so review sourcing, hedging and price-adjustment clauses."}},
+ {img:'gold',tg:['fin','mkt'],lens:{fin:"Gold works as a hedge here. Check how higher prices affect jewellers' margins and gold-loan lenders' collateral.",mkt:"With prices at records, jewellers push lighter designs and lower-carat ranges to hold price points."}},
+ {img:'candles',tg:['fin'],lens:{fin:"Financials are the largest Nifty weight, so foreign selling in banks moves the whole index."}},
+ {img:'bank',t:'bank',tg:['fin'],lens:{fin:"In-line results mean valuation, not earnings, now drives the stock. Compare price-to-book with peers."}},
+ {img:'candles',tg:['fin','gm'],lens:{fin:"Weak grey market premiums hint at subdued listing gains. Compare valuation with listed peers before applying."}},
+ {img:'skyline',tg:['fin','mkt','ops'],lens:{fin:"A growth beat supports earnings forecasts, though the RBI may stay cautious on rates. Watch the GDP deflator.",mkt:"Faster growth supports consumer spending, but flat farm output means rural-focused brands may see slower volumes.",ops:"Higher manufacturing output tightens capacity, so plan for longer lead times and input shortages."}},
+ {img:'cart',tg:['fin','mkt'],lens:{fin:"Easing food inflation lowers pressure on the RBI, but core inflation keeps real rates in focus.",mkt:"Cheaper vegetables free up household budgets, which helps spending on packaged food and discretionary items."}},
+ {img:'chip',tg:['ops','mkt'],lens:{ops:"Cheaper imported components lower assemblers' costs and change make-or-buy decisions for local suppliers.",mkt:"Lower component costs could mean lower prices or fatter margins on gadgets ahead of festive launches."}},
+ {img:'scales',t:'law',tg:['gm'],lens:{gm:"Federalism rulings shape how companies handle state taxes and regulation. Multi-state firms should map their exposure."}},
+ {img:'dome',tg:['gm'],lens:{gm:"Disruptions delay bills on labour, tax and trade, so planning around reform timing is risky."}},
+ {img:'ballot',tg:[]},
+ {img:'chip',tg:['ops','fin','gm'],lens:{ops:"This is a long-lead supply-chain project. Watch tooling, power, water and the supplier ecosystem.",fin:"Capital-intensive: returns depend on subsidy approvals and technology partners.",gm:"A big strategic bet on a new industry, with a long payback and policy dependence."}},
+ {img:'plane',tg:['ops','mkt'],lens:{ops:"A single-point IT failure shows why business continuity plans and manual fallbacks matter.",mkt:"Service failures hit brand trust. How the airline communicates and compensates will decide the damage."}},
+ {img:'bulb',t:'start',tg:['hr','gm'],lens:{hr:"Founder exits test succession planning and investor-governance clauses.",gm:"Watch how the board handles continuity right after a funding round."}},
+ {img:'phone',tg:['fin','ana','mkt'],lens:{fin:"Fraud checks add friction but protect trust in digital payments. Fintech and bank earnings depend on volumes.",ana:"Transaction volumes and fraud rates make good datasets for anomaly-detection case studies.",mkt:"Payment apps compete on rewards and trust, and extra verification is a UX challenge for them."}},
+ {img:'phone',tg:['mkt'],lens:{mkt:"A feature-led launch in a crowded mid-range segment. The question is whether satellite messaging justifies a premium."}},
+ {img:'rocket',tg:['ops'],lens:{ops:"Test milestones and supplier readiness drive schedules in complex programmes."}},
+ {img:'film',t:'ent',tg:['mkt'],lens:{mkt:"Award wins lift a regional film's streaming and marketing value, and platforms bid more for those titles."}},
+ {img:'arch',tg:[]},
+ {img:'book',tg:[]},
+ {img:'cricket',tg:['mkt'],lens:{mkt:"Series wins lift broadcast ratings and sponsor value ahead of the next sponsorship cycle."}},
+ {img:'bank',tg:['fin','gm'],lens:{fin:"Higher-for-longer US rates keep the dollar strong and pressure emerging-market flows and the rupee."}},
+ {img:'candles',tg:['fin','ana'],lens:{fin:"Rising yields cut bond prices and raise discount rates, which hits long-duration growth stocks first.",ana:"A good case for yield-curve and rate-sensitivity modelling."}},
+ {img:'oil',t:'energy',tg:['fin','ops'],lens:{fin:"Lower crude eases India's import bill and inflation but hurts oil producers. Look at oil marketing company margins.",ops:"Fuel is a major cost for logistics and manufacturing, so lower prices help transport-heavy businesses."}},
+ {img:'bank',tg:['fin'],lens:{fin:"A downgrade raises the government's borrowing cost, and bank bond portfolios take mark-to-market losses."}},
+ {img:'globe',t:'world',tg:['fin','gm'],lens:{fin:"A wealth tax would affect family offices and private banking. Implementation is the real risk."}},
+ {img:'skyline',t:'bank',tg:['fin','gm','hr'],lens:{fin:"Merger gains come from costs, not revenue. Check the exchange ratio, capital impact and integration costs.",hr:"Integration usually means overlapping roles and job cuts. Communication and retention plans decide morale.",gm:"A consolidation play: weigh scale benefits against integration risk and regulatory approval."}},
+ {img:'chip',tg:['ana','fin'],lens:{ana:"AI data-centre demand drives chip revenue, so the data-centre share of sales is a leading indicator.",fin:"Beats against estimates do not always lift shares. Check guidance and valuation."}},
+ {img:'battery',tg:['ops','ana'],lens:{ops:"Battery life drives total cost of ownership for EVs and devices. Scale-up is a manufacturing question.",ana:"Lab results rarely translate directly. Look at test conditions and sample sizes before extrapolating."}},
+ {img:'palette',tg:[]},
+ {img:'book',tg:[]}
+];
+
+/* stories that "arrive" while the page is open, to demonstrate live updates */
+const ARR=[
+ {delay:25,r:'IN',t:'fin',src:'Moneycontrol',p:3,d:[5,4,4,3,4],img:'candles',tg:['fin'],
+  h:"Sensex rebounds 450 points as banks recover",
+  sum:"The Sensex closed 450 points higher at 80,210 as private banks and financial shares rebounded from the previous session's sell-off. Foreign investors turned small net buyers. Analysts say the recovery is technical rather than a change in outlook.",
+  mean:"A bounce after a dip. The market is still watching foreign flows and rate signals.",
+  why:"A routine market move after a fall.",
+  lens:{fin:"Rebounds after foreign selling are usually short-lived unless flows turn. Watch FPI data over the week."},
+  viz:{k:'spark',cap:"Sensex",s:[79950,79820,79760,79800,80210],x:["Open","Now"],e:"80,210",d:"+450 pts"}},
+ {delay:70,r:'IN',t:'fmcg',src:'Mint',p:4,d:[6,4,5,5,6],img:'shelf',tg:['mkt','ops'],
+  h:"Leading FMCG maker raises soap prices by 3% from next month",
+  sum:"A large consumer goods company will raise prices on its soap range by 3% next month, citing higher palm oil costs. It will keep prices of its lowest-priced packs unchanged to protect volumes. Rivals have not yet announced increases.",
+  mean:"Household soap gets slightly costlier, and rivals may follow if input costs stay high.",
+  why:"An everyday product with a small price change.",
+  lens:{mkt:"A pricing case: protect entry packs, raise prices on premium variants. Watch whether rivals follow and how shoppers trade down.",ops:"Commodity costs pass through with a lag. Consider hedging palm oil and reviewing the pack-size mix."},
+  viz:{k:'facts',cap:"Price change, soap range",rows:[["Increase","+3%","from next month"],["Reason","Palm oil costs",""]]}},
+ {delay:130,r:'IN',t:'edu',src:'Deccan Herald',p:3,d:[6,4,5,7,5],img:'cap',tg:['hr','ana','gm'],
+  h:"Government to train one million students in AI skills over 12 weeks",
+  sum:"The government will run a 12-week AI skills programme for one million college students, with industry partners providing tools and mentors. Registration opens next month. Employers say they will recognise the certificate in campus hiring.",
+  mean:"More graduates will have basic AI skills, which could raise the baseline employers expect.",
+  why:"Large in scale and durable, though quality is untested.",
+  lens:{hr:"Expect AI literacy to become a baseline hiring filter, and plan training for current staff too.",ana:"A free programme to build practical skills. Check tool coverage and project work.",gm:"Workforce readiness is becoming a competitive input for companies."},
+  viz:{k:'facts',cap:"AI skills programme",rows:[["Students","1 million",""],["Duration","12 weeks",""]]}},
+ {delay:200,r:'IN',t:'bank',src:'Business Today',p:6,d:[8,5,5,6,7],img:'bank',tg:['fin','gm'],
+  h:"Public sector banks raise lending rates by 15 bps after RBI move",
+  sum:"The country's largest public sector banks raised their benchmark lending rates by 15 basis points, passing on part of the RBI's repo rate rise. Home and car loan EMIs will go up from next month. Deposit rates are expected to follow within weeks.",
+  mean:"Loan EMIs rise soon for borrowers, and savers can expect better deposit rates.",
+  why:"Directly affects borrowers and flows from the central bank's decision.",
+  lens:{fin:"Transmission is partial and gradual. Watch the gap between lending and deposit rates for margin effects.",gm:"Rate pass-through is how central bank policy reaches the real economy."},
+  viz:{k:'facts',cap:"Lending rates, public sector banks",rows:[["Rate rise","+15 bps","benchmark rates"],["EMIs","Up next month",""]]}},
+ {delay:290,r:'IN',t:'jobs',src:'NDTV',p:2,d:[3,3,3,3,5],img:'people',tg:['hr','mkt'],
+  h:"Major FMCG firm opens 300 management trainee roles for campus hiring",
+  sum:"A leading consumer goods company will hire 300 management trainees from business schools this season, up from 240 last year. Roles span sales, marketing and supply chain. Applications open next week.",
+  mean:"Hiring in consumer goods is picking up, with graduate roles in sales and supply chain.",
+  why:"Relevant to graduating students, with narrow wider impact.",
+  lens:{mkt:"Sales and brand roles are on offer. Prepare consumer-insight and distribution case examples.",hr:"Trainee intake size is a benchmark for workforce planning in consumer goods."},
+  viz:{k:'facts',cap:"Campus hiring",rows:[["Roles","300","up from 240"],["Functions","3 areas","sales, marketing, supply"]]}},
+ {delay:380,r:'GL',t:'energy',src:'Al Jazeera',p:6,d:[8,6,8,3,6],img:'oil',tg:['fin','ops'],
+  h:"Oil jumps 3% after supply disruption at a key export terminal",
+  sum:"Brent crude rose 3% to $76.10 a barrel after loading was halted at a major export terminal. The operator says it expects to resume within days. Traders are watching whether other producers can make up the shortfall.",
+  mean:"A short-term price spike from a supply problem. It will fade quickly if loading restarts.",
+  why:"A sudden move, but expected to be temporary.",
+  lens:{fin:"A supply-shock spike usually reverses. Watch the futures curve and whether the jump spreads to refiners.",ops:"Short-term fuel swings affect freight, so consider fuel clauses in logistics contracts."},
+  viz:{k:'spark',cap:"Brent crude, $ per barrel",s:[73.8,74.0,73.9,74.6,76.1],x:["Yesterday","Now"],e:"$76.10",d:"+3% today"}}
+];
+/*END*/
+
+/* ---------- editorial illustrations: one drawn scene per story, no external images ---------- */
+const R=(x,y,w,h,f,o=1,rx=0)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${f}" opacity="${o}"/>`;
+const C=(x,y,r,f,o=1)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" opacity="${o}"/>`;
+const E=(x,y,rx,ry,f,o=1)=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}" opacity="${o}"/>`;
+const PG=(p,f,o=1)=>`<polygon points="${p}" fill="${f}" opacity="${o}"/>`;
+const PA=(d,f,o=1,s='none',sw=0)=>`<path d="${d}" fill="${f}" opacity="${o}" stroke="${s}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+const L=(x1,y1,x2,y2,s,sw=3,o=1)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s}" stroke-width="${sw}" stroke-linecap="round" opacity="${o}"/>`;
+const TX=(x,y,sz,t,f)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${sz}" font-weight="700" fill="${f}" font-family="IBM Plex Sans,Arial,sans-serif">${t}</text>`;
+const WHEEL=(x,y,r,d,w)=>C(x,y,r,d)+`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${w}" stroke-width="4"/>`+C(x,y,5,w);
+
+/* every drawing sits on a ground line at y=170 inside a 640x220 frame; (a)ccent, (w)hite, (d)ark, (c) complementary */
+const FG={
+bank:(a,w,d,c)=>PG('250,72 320,38 390,72',w)+[0,1,2,3,4].map(i=>R(262+i*24,80,14,62,w,.95,2)).join('')+R(242,142,156,12,a)+R(232,154,176,10,w,.85)+C(446,116,28,a)+TX(446,127,32,'₹',d),
+candles:(a,w,d,c)=>{const t=[120,112,118,100,92,98,78,66,58],h=[22,26,18,30,24,20,32,26,30],u=[1,0,1,1,0,1,1,1,1];let s='';t.forEach((y,i)=>{const x=200+i*30;s+=L(x+8,y-12,x+8,y+h[i]+12,w,2,.8)+R(x,y,16,h[i],u[i]?a:c,1,2)});return s+PA('M208 110 L238 104 L268 112 L298 96 L328 92 L358 102 L388 80 L418 70 L448 60','none',.9,w,3)+C(448,60,5,w)},
+coins:(a,w,d,c)=>{let s='';[[246,3],[320,5],[394,2]].forEach(([x,n])=>{for(let j=0;j<n;j++)s+=E(x,162-j*10,34,10,a)+`<ellipse cx="${x}" cy="${162-j*10}" rx="34" ry="10" fill="none" stroke="${d}" stroke-width="2" opacity=".45"/>`;s+=TX(x,162-(n-1)*10+5,15,'₹',d)});return s},
+gold:(a,w,d,c)=>{const bar=(x,y)=>PG(`${x},${y} ${x+74},${y} ${x+64},${y-24} ${x+10},${y-24}`,a)+PG(`${x+10},${y-24} ${x+64},${y-24} ${x+58},${y-31} ${x+16},${y-31}`,w,.7)+R(x+22,y-17,30,6,d,.25,2);return bar(210,166)+bar(292,166)+bar(374,166)+bar(251,135)+bar(333,135)+bar(292,104)+L(250,40,250,60,w,3,.8)+L(240,50,260,50,w,3,.8)+L(430,56,430,70,w,3,.7)+L(423,63,437,63,w,3,.7)},
+plane:(a,w,d,c)=>E(190,64,40,10,w,.55)+E(470,146,50,10,w,.5)+`<g transform="rotate(-10 320 110)">`+PG('244,104 224,70 246,70 276,104',c)+PG('316,108 276,162 300,162 352,114',a)+PG('324,106 292,62 314,62 356,104',a,.7)+E(320,110,96,16,w)+C(388,106,7,d,.45)+[0,1,2,3,4,5].map(i=>C(290+i*14,106,3,d,.35)).join('')+`</g>`+L(120,110,210,110,w,3,.4)+L(100,126,186,126,w,3,.3),
+dome:(a,w,d,c)=>R(319,52,3,26,w)+PG('322,52 348,59 322,66',a)+PA('M250 142 A70 64 0 0 1 390 142 Z',w)+R(300,128,40,14,a,.9)+R(236,142,168,22,w,.95)+[0,1,2,3,4,5,6].map(i=>R(246+i*23,144,9,20,d,.3)).join('')+R(224,164,192,6,a),
+scales:(a,w,d,c)=>C(320,48,7,a)+R(318,52,4,106,w)+R(240,60,160,6,a,1,3)+L(250,66,226,114,w,2)+L(250,66,274,114,w,2)+PA('M222 114 A28 14 0 0 0 278 114 Z',c)+L(390,66,366,104,w,2)+L(390,66,414,104,w,2)+PA('M362 104 A28 14 0 0 0 418 104 Z',c)+R(288,156,64,10,w,1,3)+R(300,148,40,10,a,1,3),
+ballot:(a,w,d,c)=>R(298,40,44,62,a,1,3)+L(306,54,334,54,d,3,.5)+L(306,64,334,64,d,3,.4)+R(246,98,148,68,w,1,8)+R(288,92,64,10,d,.8,4)+PA('M286 134 L308 154 L352 118','none',1,c,9),
+chip:(a,w,d,c)=>[0,1,2,3,4,5].map(i=>R(250,58+i*16,20,6,w,.9,2)+R(370,58+i*16,20,6,w,.9,2)+R(282+i*16,26,6,20,w,.9,2)+R(282+i*16,150,6,18,w,.9,2)).join('')+R(266,44,108,108,w,1,12)+R(286,64,68,68,a,1,8)+TX(320,108,28,'AI',d)+C(300,76,3,d,.4),
+phone:(a,w,d,c)=>R(278,26,84,142,w,1,14)+R(286,42,68,108,d,.9,8)+R(292,48,56,28,c,.9,6)+TX(320,69,18,'₹',d)+[0,1,2,3,4,5].map(i=>C(302+(i%3)*18,92+Math.floor(i/3)*26,7,[a,w,c][i%3],.95)).join('')+R(306,30,28,5,d,.5,3)+PA('M390 70 A36 36 0 0 1 390 120','none',.9,a,5)+PA('M404 56 A56 56 0 0 1 404 134','none',.6,a,5),
+rocket:(a,w,d,c)=>E(320,170,70,8,w,.35)+PG('300,108 272,148 300,138',a)+PG('340,108 368,148 340,138',a)+PA('M320 24 C352 54 354 104 342 138 L298 138 C286 104 288 54 320 24 Z',w)+C(320,76,12,c)+`<circle cx="320" cy="76" r="12" fill="none" stroke="${a}" stroke-width="4"/>`+PA('M306 138 Q320 196 334 138 Z',a)+PA('M313 138 Q320 172 327 138 Z',w,.85)+C(220,60,3,w)+C(252,100,2,w,.8)+C(420,48,3,w)+C(450,110,2,w,.8)+C(180,120,2,w,.7),
+film:(a,w,d,c)=>`<g transform="rotate(-6 320 110)">`+R(250,86,140,76,d,.95,6)+R(250,60,140,24,d,.95,4)+[0,1,2,3,4].map(i=>PG(`${254+i*24},84 ${272+i*24},84 ${282+i*24},60 ${264+i*24},60`,i%2?a:w)).join('')+R(264,102,90,6,w,.5,3)+R(264,118,60,6,w,.35,3)+`</g>`+R(420,60,64,100,d,.95,4)+[0,1,2,3,4].map(i=>R(426,68+i*18,8,10,w,.8,2)+R(470,68+i*18,8,10,w,.8,2)).join('')+R(438,68,28,40,c,.9,2)+R(438,114,28,40,a,.9,2),
+arch:(a,w,d,c)=>R(186,66,268,100,w,.9,4)+[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>C(200+i*22,74,3,d,.3)).join('')+[240,320,400].map(x=>PA(`M${x-32} 166 V108 A32 32 0 0 1 ${x+32} 108 V166 Z`,d,.88)+PA(`M${x-22} 166 V110 A22 22 0 0 1 ${x+22} 110 V166 Z`,a,.8)).join('')+R(176,162,288,8,c,.9),
+book:(a,w,d,c)=>PA('M320 72 Q268 54 210 68 V152 Q268 138 320 156 Z',w)+PA('M320 72 Q372 54 430 68 V152 Q372 138 320 156 Z',w,.92)+[0,1,2,3].map(i=>L(228,88+i*14,304,92+i*14,d,3,.22)+L(336,92+i*14,412,88+i*14,d,3,.22)).join('')+PA('M320 72 V156','none',1,a,4)+PA('M372 62 V104 l8 -9 l8 9 V64 Z',c)+C(160,60,3,w)+C(486,50,4,w,.8),
+cricket:(a,w,d,c)=>PG('120,170 520,170 560,220 80,220',c,.28)+[0,1,2].map(i=>R(470+i*14,98,8,68,w,1,2)).join('')+R(468,92,12,5,a)+R(484,92,12,5,a)+`<g transform="rotate(32 300 112)">`+R(290,38,16,44,a,1,5)+R(278,80,40,86,w,1,10)+L(298,92,298,150,d,3,.18)+`</g>`+C(392,84,16,'#D6282E')+PA('M380 78 Q392 84 380 92','none',1,w,2.5)+PA('M404 76 Q392 84 404 92','none',1,w,2.5)+PA('M408 78 Q440 44 466 90','none',.7,w,3),
+oil:(a,w,d,c)=>PA('M196 168 L228 62 L260 168','none',1,w,4)+L(206,138,250,138,w,3)+L(214,108,242,108,w,3)+L(206,138,242,108,w,2,.7)+C(228,56,6,a)+R(290,84,84,84,a,1,14)+R(290,102,84,8,d,.3)+R(290,142,84,8,d,.3)+TX(332,134,22,'OIL',d)+PA('M426 78 C426 78 406 104 406 120 A20 20 0 0 0 446 120 C446 104 426 78 426 78 Z',w),
+globe:(a,w,d,c)=>C(320,100,66,c,.95)+PA('M278 70 q20 -16 42 -4 q10 18 -8 30 q-22 8 -34 -6 z',w,.8)+PA('M326 112 q26 -10 38 8 q-4 26 -26 30 q-18 -14 -12 -38 z',w,.8)+PA('M290 120 q12 -4 18 6 q-4 14 -16 12 z',w,.7)+`<ellipse cx="320" cy="100" rx="26" ry="66" fill="none" stroke="${w}" stroke-width="2" opacity=".5"/><ellipse cx="320" cy="100" rx="66" ry="22" fill="none" stroke="${w}" stroke-width="2" opacity=".4"/><ellipse cx="320" cy="100" rx="104" ry="26" fill="none" stroke="${a}" stroke-width="4" transform="rotate(-18 320 100)"/>`+C(404,76,7,a),
+battery:(a,w,d,c)=>R(236,66,150,88,w,1,14)+R(386,92,16,36,w,1,5)+[0,1,2,3].map(i=>R(248+i*34,78,28,64,i<3?a:c,1,5)).join('')+PG('322,70 298,112 318,112 306,150 346,102 324,102',d,.9)+PA('M180 120 q-12 -24 6 -40','none',.8,w,4),
+factory:(a,w,d,c)=>R(226,106,184,60,w,1,3)+[0,1,2].map(i=>PG(`${226+i*61},106 ${226+i*61},78 ${226+i*61+61},106`,w)).join('')+R(424,56,24,110,a)+R(424,76,24,6,d,.3)+E(436,44,18,10,w,.6)+E(458,28,16,9,w,.5)+E(482,16,14,8,w,.4)+[0,1,2,3].map(i=>R(240+i*42,122,24,18,c,.9,2)).join('')+R(300,144,40,22,d,.55,2),
+shelf:(a,w,d,c)=>{const cols=[a,c,w,'#FF6B6B','#7CE0A3'];let s=R(188,162,264,8,w,.95,2)+R(188,106,264,8,w,.95,2)+R(188,50,264,8,w,.95,2);[[50,[26,34,22,30,36,24,32,28,34,26]],[106,[34,26,38,28,22,36,30,24,32,30]],[162,[30,24,34,38,26,32,22,36,28,34]]].forEach(([base,hs],r)=>hs.forEach((h,i)=>{s+=R(196+i*25,base-h,19,h,cols[(i+r*2)%5],1,4)+R(196+i*25,base-h,19,5,w,.35,2)}));return s},
+billboard:(a,w,d,c)=>R(250,128,9,40,w,.9)+R(381,128,9,40,w,.9)+R(206,30,228,100,w,1,8)+R(216,40,208,80,c,1,4)+TX(320,92,40,'NEW',d)+R(232,102,176,6,w,.5,3)+[0,1,2,3].map(i=>R(226+i*52,22,32,8,a,1,2)).join(''),
+people:(a,w,d,c)=>{const sk=['#F2C9A5','#D79B72','#A8683F'],bc=[a,c,w];let s='';[0,1,2].forEach(i=>{const x=220+i*64;s+=PA(`M${x-30} 168 q0 -56 30 -56 q30 0 30 56 Z`,bc[i])+C(x,88,19,sk[i])+PA(`M${x-19} 84 q19 -22 38 0`,d,.8)});return s+PA('M410 56 h70 a8 8 0 0 1 8 8 v26 a8 8 0 0 1 -8 8 h-40 l-14 12 v-12 h-16 a8 8 0 0 1 -8 -8 v-26 a8 8 0 0 1 8 -8 Z',w,.95)+L(420,70,472,70,d,3,.3)+L(420,82,458,82,d,3,.3)},
+truck:(a,w,d,c)=>R(186,82,152,72,w,1,4)+R(196,92,132,10,a,1,2)+R(196,108,80,6,d,.2,3)+PG('338,104 388,104 412,130 412,154 338,154',a)+PG('348,110 380,110 398,128 348,128',c,.95)+WHEEL(226,158,17,d,w)+WHEEL(282,158,17,d,w)+WHEEL(376,158,17,d,w)+L(120,190,520,190,w,3,.25),
+leaf:(a,w,d,c)=>PA('M320 36 C404 56 428 130 332 164 C246 134 244 66 320 36 Z',c)+PA('M332 164 C330 120 322 84 320 44','none',.9,w,4)+PA('M326 128 L362 100 M324 100 L290 84 M327 80 L352 62','none',.7,w,3)+PA('M250 168 C246 140 262 120 290 112 C298 138 282 160 250 168 Z',a)+C(500,50,22,a,.9),
+health:(a,w,d,c)=>R(272,34,96,96,w,1,18)+R(312,48,16,68,'#E5484D',1,4)+R(286,74,68,16,'#E5484D',1,4)+PA('M130 152 L250 152 L272 152 L290 120 L308 172 L328 132 L344 152 L510 152','none',1,a,5),
+house:(a,w,d,c)=>R(256,98,128,68,w,1,3)+PG('244,102 320,46 396,102',c)+R(304,124,32,42,d,.8,3)+R(268,112,26,22,a,1,3)+R(346,112,26,22,a,1,3)+R(448,142,6,26,w,.9)+R(420,108,64,34,a,1,5)+TX(452,131,16,'SOLD',d),
+car:(a,w,d,c)=>L(150,108,210,108,w,3,.35)+R(222,114,214,40,a,1,14)+PA('M258 116 L284 78 L372 78 L402 116 Z',a)+PA('M270 112 L290 88 L322 88 L322 112 Z',c,.95)+PA('M330 112 L330 88 L364 88 L388 112 Z',c,.95)+WHEEL(276,156,21,d,w)+WHEEL(390,156,21,d,w)+PG('336,128 322,142 332,142 326,152 346,136 336,136',w),
+wheat:(a,w,d,c)=>{let s=C(520,52,26,a,.85);for(let i=0;i<7;i++){const x=220+i*34,t=i%2?10:-8;s+=L(x,168,x+t,70,w,3,.9);for(let k=0;k<5;k++){s+=E(x+t*(1-k*.12)+(k%2?7:-7),74+k*13,5,10,k%2?a:w,.95)}}return s},
+bulb:(a,w,d,c)=>[0,1,2,3,4,5,6].map(i=>{const t=(-90+(i-3)*28)*Math.PI/180;return L(320+Math.cos(t)*62,88+Math.sin(t)*62,320+Math.cos(t)*80,88+Math.sin(t)*80,w,4,.85)}).join('')+C(320,88,46,a)+R(300,128,40,16,w,1,4)+R(304,146,32,8,w,.85,3)+R(310,156,20,8,w,.7,3)+PA('M304 104 q16 -32 32 0 M312 104 V84 M328 104 V84','none',.8,d,4),
+palette:(a,w,d,c)=>E(320,100,100,62,w)+C(372,124,15,d,.85)+C(268,82,12,a)+C(304,62,12,c)+C(346,64,12,'#FF6B6B')+C(388,84,12,'#6BE3A0')+C(262,120,12,'#7B8CFF')+`<g transform="rotate(35 450 92)">`+R(442,36,10,96,a,1,4)+R(442,36,10,24,w,1,3)+`</g>`,
+skyline:(a,w,d,c)=>{const h=[60,92,52,112,80,128,70];let s='';h.forEach((y,i)=>{const x=196+i*36;s+=R(x,166-y,28,y,w,.9,2);for(let k=0;k<Math.floor(y/20);k++)s+=R(x+6,166-y+8+k*18,6,8,d,.28)+R(x+16,166-y+8+k*18,6,8,d,.28)});return s+PA('M180 120 L260 96 L320 106 L420 52 L470 42','none',1,a,6)+PG('488,36 462,34 474,56',a)},
+cart:(a,w,d,c)=>PG('242,86 424,86 402,130 262,130',c,.55)+PA('M196 62 H226 L260 134 H404 L426 84 H238','none',1,w,8)+R(272,60,30,26,a,1,3)+R(310,44,24,42,w,1,5)+R(342,64,38,22,'#FF6B6B',1,3)+WHEEL(286,154,13,d,w)+WHEEL(388,154,13,d,w),
+cap:(a,w,d,c)=>PG('320,50 440,90 320,130 200,90',w)+PA('M262 108 V142 Q320 172 378 142 V108 L320 130 Z',a)+L(428,94,428,138,c,4)+C(428,142,7,c)+PA('M290 112 L320 122 L350 112','none',.4,d,3)
+};
+
+const HUE={fin:218,bank:208,eco:175,bus:255,start:290,fmcg:22,mkt:345,auto:200,real:38,energy:140,agri:95,jobs:265,edu:232,health:168,pol:4,law:28,world:190,tech:242,sci:275,ent:328,arts:310,lit:18,spo:130};
+
+function pic(kind,topic,id){
+  const h=HUE[topic]!=null?HUE[topic]:220;
+  const top=`hsl(${h} 55% 24%)`,bot=`hsl(${h} 68% 56%)`,gr=`hsl(${h} 55% 13%)`,far=`hsl(${h} 50% 19%)`,c3=`hsl(${(h+160)%360} 85% 68%)`;
+  const a='#FFC857',w='#FFFFFF';
+  let seed=0;for(const ch of id)seed=(seed*31+ch.charCodeAt(0))%997;
+  let sil='',x=-420,i=0;
+  while(x<1060){const bw=24+((seed+i*37)%30),bh=16+((seed*3+i*53)%46);sil+=`<rect x="${x}" y="${170-bh}" width="${bw}" height="${bh}" fill="${far}" opacity=".6"/>`;x+=bw+4;i++}
+  const g='g'+id,sx=520+((seed%7)-3)*14;
+  const fg=(FG[kind]||FG.skyline)(a,w,gr,c3);
+  return `<svg viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet" style="overflow:visible" aria-hidden="true" focusable="false"><defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs><rect x="-420" y="-40" width="1480" height="260" fill="url(#${g})"/>${C(sx,56,34,w,.18)}${C(sx,56,20,w,.22)}${sil}<rect x="-420" y="170" width="1480" height="80" fill="${gr}"/><rect x="-420" y="170" width="1480" height="3" fill="${w}" opacity=".12"/>${fg}</svg>`;
+}
+
+/* ---------- constants ---------- */
+const W=DIMS.map(x=>x[2]);
+const composite=d=>d.reduce((a,v,i)=>a+v*W[i],0);
+const bandOf=n=>n>=9?5:n>=7?4:n>=5?3:n>=3?2:1;
+const BAND_NAME={1:'Minor',2:'Routine',3:'Notable',4:'High',5:'Critical'};
+const TOPICS=[['fin','Finance & Markets'],['bank','Banking & Insurance'],['eco','Economy & Policy'],['bus','Business & Industry'],['start','Startups & Funding'],['fmcg','Retail & FMCG'],['mkt','Marketing & Media'],['auto','Auto & Mobility'],['real','Real Estate'],['energy','Energy & Climate'],['agri','Agriculture'],['jobs','Jobs & Workplace'],['edu','Education'],['health','Health'],['pol','Politics'],['law','Law & Courts'],['world','World Affairs'],['tech','Technology'],['sci','Science'],['ent','Film & Entertainment'],['arts','Arts & Culture'],['lit','Literature'],['spo','Sports']];
+const TLABEL=Object.fromEntries(TOPICS);
+const RLABEL={IN:'India',GL:'Global',ALL:'India and global'};
+const LENS_NAME={fin:'Finance',mkt:'Marketing',hr:'HR',ops:'Operations',ana:'Analytics & IT',gm:'General management'};
+const PROGN={mgmt:'Management',eco:'Economics',eng:'Engineering',law:'Law',sci:'Science',arts:'Arts'};
+const KIND=[['reader','Reader','I read the news to stay informed.'],['student','Student','I want news that matters for what I study.'],['pro','Working professional','I want news that matters for my function.']];
+const PROG=[['mgmt','Management (MBA / PGDM)'],['eco','Economics / Commerce'],['eng','Engineering / Technology'],['law','Law'],['sci','Science'],['arts','Arts / Humanities']];
+const SPEC=[['fin','Finance','Markets, banking, valuation'],['mkt','Marketing','FMCG, brands, advertising, consumers'],['hr','HR','Hiring, labour rules, the workplace'],['ops','Operations & Supply chain','Logistics, manufacturing, procurement'],['ana','Analytics & IT','Data, AI, technology'],['gm','General management','Strategy and the wider economy']];
+const DEF={fin:['fin','bank','eco','real','start'],mkt:['fmcg','mkt','start','ent','tech'],hr:['jobs','edu','bus','eco','tech'],ops:['bus','auto','energy','agri','eco'],ana:['tech','sci','start','fin'],gm:['bus','eco','fin','start','world'],law:['law','pol','world'],sci:['sci','tech','energy','health'],arts:['arts','lit','ent','world'],eng:['tech','sci','auto','energy','start'],eco:['eco','fin','bank','world'],reader:[]};
+
+const $=s=>document.querySelector(s);
+const plural=(n,a,b)=>n===1?a:b;
+const reduceMotion=()=>window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function ago(ts){const m=Math.floor((Date.now()-ts)/60000);if(m<1)return 'Just now';if(m<60)return m+' min ago';const h=Math.floor(m/60);if(h<24)return h+' h ago';const d=Math.floor(h/24);return d+' '+(d===1?'day':'days')+' ago'}
+
+/* ---------- data ---------- */
+let uid=0;
+/* buzz = 60% intensity + 40% coverage (how many newspapers carry the story, capped at 12) */
+function prep(s,ts){const sc=composite(s.d);return Object.assign({id:'s'+(uid++),sc:sc,n:Math.max(1,Math.min(10,Math.round(sc))),bz:0.6*sc+0.4*Math.min(10,s.p/1.2),ts:ts,fresh:false},s)}
+const T0=Date.now();
+RAW.forEach((s,i)=>{if(META[i])Object.assign(s,META[i])});
+/* sample stories are spread over the last month so the weekly and monthly views have something to rank (days ago, by story order) */
+const AGE={2:3.5,5:0.2,7:1.8,8:5.1,9:7.6,10:13,11:11,13:8.4,14:17,17:10,19:15,20:6.8,21:26,22:18,23:2.9,24:2.2,25:4.6,26:6.3,27:19,28:9,29:22,31:24,32:12,33:27,34:2.5,39:5.7,40:3.4,41:14,42:20,43:21,45:4.1,46:16,47:8.8,48:6.1,49:7.3,50:12.5,53:23,54:2.4};
+const S=RAW.map((s,i)=>prep(s,T0-(AGE[i]!=null?AGE[i]*24:s.hrs)*3600000));
+const pending=[];
+let lastCheck=Date.now();
+
+/* ---------- state ---------- */
+const state={region:'IN',topic:'all',src:'all',min:1,sort:'latest',q:'',view:'you',moreTopics:false,mode:'latest',asof:0,topn:10};
+const MODES=['latest','week','month'];
+try{const h0=(location.hash||'').slice(1);if(MODES.includes(h0))state.mode=h0}catch(e){}
+let P=null;
+try{const raw=localStorage.getItem('nw_profile');if(raw)P=JSON.parse(raw)}catch(e){P=null}
+
+function lensOf(o){
+  if(o.kind==='pro')return o.spec||null;
+  if(o.kind==='student'){if(o.prog==='mgmt')return o.spec||null;if(o.prog==='eco')return 'fin';if(o.prog==='eng')return 'ana'}
+  return null;
+}
+function pname(p){
+  if(!p)return 'Set up your feed';
+  if(p.kind==='reader')return 'Reader';
+  const who=p.kind==='student'?'student':'professional';
+  const f=(p.kind==='pro'||p.prog==='mgmt')?LENS_NAME[p.lens]:PROGN[p.prog];
+  return (f?f+' ':'')+who;
+}
+const canPersonal=()=>!!P&&(!!P.lens||P.topics.length>0);
+const personal=()=>canPersonal()&&state.view==='you';
+function relevant(s){
+  if(!personal())return true;
+  return s.n>=9||P.topics.includes(s.t)||(!!P.lens&&!!s.tg&&s.tg.includes(P.lens));
+}
+function reasonOf(s){
+  if(s.n>=9)return 'Critical story';
+  if(P.topics.includes(s.t))return 'You follow '+TLABEL[s.t];
+  return LENS_NAME[P.lens]+' lens';
+}
+
+/* ---------- infographics ---------- */
+function spark(v,c){
+  const Wd=222,H=60,px=10,py=9,s=v.s,n=s.length;
+  const mn=Math.min(...s),mx=Math.max(...s),r=(mx-mn)||1;
+  const X=i=>px+i*(Wd-2*px)/(n-1),Y=x=>H-py-(x-mn)/r*(H-2*py);
+  let d='';
+  s.forEach((x,i)=>{
+    if(i===0)d+=`M${X(0).toFixed(1)} ${Y(x).toFixed(1)}`;
+    else d+=v.step?` L${X(i).toFixed(1)} ${Y(s[i-1]).toFixed(1)} L${X(i).toFixed(1)} ${Y(x).toFixed(1)}`:` L${X(i).toFixed(1)} ${Y(x).toFixed(1)}`;
+  });
+  const area=d+` L${X(n-1).toFixed(1)} ${H} L${X(0).toFixed(1)} ${H} Z`;
+  return `<div class="big"><b>${v.e}</b><span class="chg">${v.d}</span></div>
+  <svg class="chart" viewBox="0 0 ${Wd} ${H}" aria-hidden="true">
+    <line x1="0" x2="${Wd}" y1="${H*.3}" y2="${H*.3}" stroke="var(--line)" stroke-width="1"/>
+    <line x1="0" x2="${Wd}" y1="${H*.7}" y2="${H*.7}" stroke="var(--line)" stroke-width="1"/>
+    <path d="${area}" fill="${c}" opacity=".14"/>
+    <path d="${d}" fill="none" stroke="${c}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${X(n-1).toFixed(1)}" cy="${Y(s[n-1]).toFixed(1)}" r="4.5" fill="${c}" stroke="var(--chip)" stroke-width="2"/>
+  </svg>
+  <div class="xl"><span>${v.x[0]}</span><span>${v.x[1]}</span></div>`;
+}
+function bars(v,c){
+  const Wd=222,H=96,top=16,bot=16,n=v.v.length,gap=n>4?8:12;
+  const bw=Math.min(44,(Wd-gap*(n-1))/n),total=n*bw+(n-1)*gap,x0=(Wd-total)/2;
+  const mx=Math.max(...v.v),ph=H-top-bot;
+  let out='';
+  v.v.forEach((x,i)=>{
+    const h=Math.max(2,x/mx*ph),bx=x0+i*(bw+gap),by=top+ph-h,on=i===v.hi;
+    out+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${on?c:'var(--ink-2)'}" opacity="${on?1:.4}"/>`+
+         `<text class="tv" x="${(bx+bw/2).toFixed(1)}" y="${(by-4).toFixed(1)}" text-anchor="middle">${v.t[i]}</text>`+
+         `<text class="tl" x="${(bx+bw/2).toFixed(1)}" y="${H-3}" text-anchor="middle">${v.l[i]}</text>`;
+  });
+  return `<svg class="chart" viewBox="0 0 ${Wd} ${H}" aria-hidden="true"><line x1="0" x2="${Wd}" y1="${top+ph}" y2="${top+ph}" stroke="var(--line)" stroke-width="1"/>${out}</svg>`;
+}
+function facts(v){
+  return `<ul class="facts">${v.rows.map(r=>`<li><span class="fl">${r[0]}</span><b>${r[1]}</b>${r[2]?`<em>${r[2]}</em>`:''}</li>`).join('')}</ul>`;
+}
+function split(v,c){
+  const tot=v.parts.reduce((a,p)=>a+p[1],0);
+  const col=i=>i===0?c:'var(--ink-2)',op=i=>i===0?1:.45;
+  return `<div class="big"><b>${v.big}</b></div>
+  <div class="splitbar" aria-hidden="true">${v.parts.map((p,i)=>`<i style="width:${p[1]/tot*100}%;background:${col(i)};opacity:${op(i)}"></i>`).join('')}</div>
+  <div class="legend">${v.parts.map((p,i)=>`<span><i class="sw" style="background:${col(i)};opacity:${op(i)}"></i>${p[0]}<b>${p[1]}</b></span>`).join('')}</div>`;
+}
+function steps(v,c){
+  return `<ol class="steps" style="--c:${c}">${v.st.map((x,i)=>`<li class="${i<v.cur?'done':i===v.cur?'cur':''}"><i></i><b>${x[0]}</b><small>${x[1]}</small></li>`).join('')}</ol>`;
+}
+function dots(v,c){
+  return `<div class="big"><b>${v.label}</b></div><div class="dots" style="--c:${c}" aria-hidden="true">${Array.from({length:v.total},(_,i)=>`<i class="${i<v.fill?'on':''}"></i>`).join('')}</div>`;
+}
+function altOf(v){
+  if(v.k==='spark')return `${v.e}, ${v.d}, from ${v.s[0]} to ${v.s[v.s.length-1]}`;
+  if(v.k==='bars')return v.l.map((l,i)=>`${l} ${v.t[i]}`).join(', ');
+  if(v.k==='facts')return v.rows.map(r=>`${r[0]} ${r[1]}${r[2]?' ('+r[2]+')':''}`).join(', ');
+  if(v.k==='split')return `${v.big}: `+v.parts.map(p=>`${p[0]} ${p[1]}`).join(', ');
+  if(v.k==='steps')return v.st.map((x,i)=>`${x[0]} ${x[1]}${i===v.cur?' (current)':''}`).join(', ');
+  if(v.k==='dots')return v.label;
+  return '';
+}
+function figure(s){
+  if(!s.viz)return '';
+  const v=s.viz,c=`var(--d${bandOf(s.n)})`;
+  const f={spark,bars,facts,split,steps,dots}[v.k];
+  return `<figure class="fig" role="img" aria-label="${v.cap}. ${altOf(v)}"><div class="cap">${v.cap}</div>${f(v,c)}</figure>`;
+}
+
+/* ---------- filtering ---------- */
+const inRegion=s=>state.region==='ALL'||s.r===state.region;
+/* rolling windows: the week always ends today and starts on the same weekday a week ago; the month starts on the same date a month ago */
+const DAY=864e5;
+function winAt(end,mode){
+  let start;
+  if(mode==='week')start=end-7*DAY;
+  else if(mode==='month'){const d=new Date(end);d.setMonth(d.getMonth()-1);start=d.getTime()}
+  else start=end-48*3600000;
+  return [start,end];
+}
+const nowT=()=>Date.now()+(state.mode==='latest'?0:state.asof*DAY);
+const fdW=t=>new Date(t).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+const fdM=t=>new Date(t).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+function setMode(m){
+  state.mode=m;state.asof=0;state.topn=10;
+  try{if(location.hash!=='#'+m)location.hash=m}catch(e){}
+  render();
+}
+function baseList(){
+  const [w0,w1]=winAt(nowT(),state.mode);
+  return S.filter(s=>s.ts>=w0&&s.ts<=w1&&inRegion(s)&&(state.src==='all'||s.src===state.src)&&(!state.q||(s.h+' '+s.sum).toLowerCase().includes(state.q))&&relevant(s));
+}
+function regionList(){return S.filter(inRegion)}
+
+/* ---------- render ---------- */
+function render(){
+  const active=document.activeElement;
+  const key=active&&active.getAttribute?active.getAttribute('data-k'):null;
+
+  const regionSrcs=[...new Set(regionList().map(s=>s.src))].sort();
+  if(state.src!=='all'&&!regionSrcs.includes(state.src))state.src='all';
+  const base=baseList();
+  if(state.topic!=='all'&&!base.some(s=>s.t===state.topic))state.topic='all';
+
+  $('#profileTxt').textContent=pname(P);
+  $('#avatar').textContent=P?(pname(P).charAt(0)):'+';
+
+  $('#modes').innerHTML=[['latest','Latest'],['week','Top this week'],['month','Top this month']].map(([v,l])=>
+    `<button type="button" class="tab" data-mode="${v}" data-k="m${v}" aria-pressed="${state.mode===v}">${l}</button>`).join('');
+
+  $('#region').innerHTML=[['IN','India'],['GL','Global'],['ALL','All']].map(([v,l])=>
+    `<button type="button" data-region="${v}" data-k="r${v}" aria-pressed="${state.region===v}">${l}</button>`).join('');
+
+  const srcSel=$('#src');
+  srcSel.innerHTML='<option value="all">All newspapers ('+regionSrcs.length+')</option>'+regionSrcs.map(n=>{
+    const c=regionList().filter(s=>s.src===n).length;
+    return `<option value="${n}">${n} (${c})</option>`}).join('');
+  srcSel.value=state.src;
+
+  const canP=canPersonal();
+  const vc=$('#viewctl');vc.hidden=!canP;
+  vc.innerHTML=canP?[['you','For you'],['all','Everything']].map(([v,l])=>`<button type="button" data-view="${v}" data-k="v${v}" aria-pressed="${state.view===v}">${l}</button>`).join(''):'';
+
+  const atMin=s=>s.n>=state.min;
+  let ids=TOPICS.filter(([id])=>base.some(s=>s.t===id));
+  if(personal())ids=ids.slice().sort((a,b)=>(P.topics.includes(b[0])?1:0)-(P.topics.includes(a[0])?1:0));
+  let vis=ids;
+  if(!state.moreTopics&&ids.length>11){
+    vis=ids.slice(0,10);
+    if(state.topic!=='all'&&!vis.some(x=>x[0]===state.topic)){const sel=ids.find(x=>x[0]===state.topic);if(sel)vis=[...vis,sel]}
+  }
+  const allCount=base.filter(atMin).length;
+  $('#topics').innerHTML=
+    `<button type="button" class="chip${allCount?'':' zero'}" data-topic="all" data-k="tall" aria-pressed="${state.topic==='all'}">All topics <span class="ct">${allCount}</span></button>`+
+    vis.map(([id,l])=>{const c=base.filter(s=>s.t===id&&atMin(s)).length;
+      return `<button type="button" class="chip${c?'':' zero'}" data-topic="${id}" data-k="t${id}" aria-pressed="${state.topic===id}">${l} <span class="ct">${c}</span></button>`}).join('')+
+    (ids.length>11?`<button type="button" class="chip more" data-act="more" data-k="more" aria-expanded="${state.moreTopics}">${state.moreTopics?'Fewer topics':'+'+(ids.length-vis.length)+' more topics'}</button>`:'');
+
+  $('#min').value=state.min;
+  $('#readout').innerHTML=state.min===1?'All stories <span>· 1 and above</span>':`${state.min} and above <span>· ${BAND_NAME[bandOf(state.min)]} or higher</span>`;
+
+  let list=base.filter(s=>(state.topic==='all'||s.t===state.topic)&&atMin(s));
+  const ranked=state.mode!=='latest';
+  if(ranked)list.sort((a,b)=>b.bz-a.bz||b.ts-a.ts);
+  else list.sort(state.sort==='score'?(a,b)=>b.sc-a.sc||b.ts-a.ts:(a,b)=>b.ts-a.ts);
+  const total=list.length;
+  if(ranked)list=list.slice(0,state.topn);
+
+  let where=ranked?(state.mode==='week'?'Top this week':'Top this month')+' · ':(personal()?'Your feed · ':'');
+  where+=state.src!=='all'?state.src:RLABEL[state.region];
+  if(state.topic!=='all'&&state.src==='all')where+=' · '+TLABEL[state.topic];
+  $('#feedTitle').textContent=where;
+  $('#feedSub').textContent=ranked?
+    `${list.length} of ${total} ${plural(total,'story','stories')} ranked by buzz`+(personal()?` for a ${pname(P).toLowerCase()}`:'')+` · intensity ${state.min} and above`:
+    `${list.length} ${plural(list.length,'story','stories')}`+(personal()?` picked for a ${pname(P).toLowerCase()}`:'')+` · intensity ${state.min} and above · ${state.sort==='score'?'highest intensity first':'newest first'}`+(state.src!=='all'?' · front page re-ranked':'');
+
+  /* window note */
+  const [w0,w1]=winAt(nowT(),state.mode);
+  if(!ranked){
+    $('#winNote').innerHTML='Showing the last 48 hours. Older stories move to <strong>Top this week</strong> and <strong>Top this month</strong>.';
+  }else{
+    const f=state.mode==='week'?fdW:fdM;
+    const [n0,n1]=winAt(nowT()+DAY,state.mode);
+    $('#winNote').innerHTML=`<strong>${f(w0)} to ${f(w1)}</strong>. The window moves forward every day: tomorrow it covers <strong>${f(n0)} to ${f(n1)}</strong>. Ranked by buzz, which blends intensity with how many newspapers cover the story.`;
+  }
+  $('#rangebar').hidden=!ranked;
+  $('#sortField').hidden=ranked;
+  if(ranked){$('#asof').value=String(state.asof);$('#topn').value=String(state.topn)}
+
+  /* at a glance */
+  const g=$('#glance');
+  if(ranked&&list.length){
+    g.hidden=false;
+    g.innerHTML=`<h4>${state.mode==='week'?'The week':'The month'} at a glance</h4><ol>${list.slice(0,5).map((s,i)=>`<li><button type="button" data-go="${s.id}" data-k="g${s.id}"><span class="gr">${i+1}</span><span class="gh">${s.h}</span><span class="gs b${bandOf(s.n)}">${s.n}</span></button></li>`).join('')}</ol>`;
+  }else g.hidden=true;
+
+  $('#feed').innerHTML=list.length?list.map((s,i)=>storyHtml(s,i===0,ranked?i+1:0)).join(''):
+    `<div class="empty">No stories match these filters.<br><button type="button" data-act="reset" data-k="reset">Clear filters</button></div>`;
+
+  $('#me').innerHTML=P?
+    `<h4>${pname(P)}</h4><p class="hint">${P.topics.length} ${plural(P.topics.length,'topic','topics')} followed${P.lens?' · '+LENS_NAME[P.lens]+' lens on every story':''}</p><div class="mytopics">${P.topics.map(t=>`<span>${TLABEL[t]}</span>`).join('')}</div><button type="button" class="secondary" data-act="setup" data-k="edit">Edit profile</button>`:
+    `<h4>Personalise your feed</h4><p class="hint">Tell us who you are and we show only what matters to you, explained for your field.</p><button type="button" class="primary" data-act="setup" data-k="edit">Set up</button>`;
+
+  $('#pulse').innerHTML=ids.map(([id,l])=>{
+    const g=base.filter(s=>s.t===id);const avg=g.reduce((a,s)=>a+s.n,0)/g.length;
+    const col=`var(--d${bandOf(Math.round(avg))})`;
+    return `<button type="button" data-pulse="${id}" data-k="p${id}" aria-pressed="${state.topic===id}"><span class="n">${l}</span><span class="v">${avg.toFixed(1)}</span><span class="tr"><i style="width:${avg*10}%;background:${col}"></i></span></button>`}).join('');
+
+  const hb=base.filter(s=>state.topic==='all'||s.t===state.topic);
+  const counts=Array.from({length:10},(_,i)=>hb.filter(s=>s.n===i+1).length);
+  const mx=Math.max(1,...counts);
+  $('#hist').innerHTML=counts.map((c,i)=>{const n=i+1;
+    return `<button type="button" class="col${n>=state.min?' on':''}" data-bar="${n}" data-k="h${n}" aria-label="${c} ${plural(c,'story','stories')} scored ${n}. Set minimum to ${n}"><span class="n">${c}</span><span class="bar" style="height:${c?Math.max(6,Math.round(c/mx*84)):2}px;background:var(--d${bandOf(n)})"></span><span class="x">${n}</span></button>`}).join('');
+
+  $('#recipe').innerHTML=DIMS.map(d=>`<li><span>${d[0]}</span><span>${Math.round(d[2]*100)}%</span></li>`).join('');
+
+  updateBanner();
+  tick();
+  if(key){const el=document.querySelector(`[data-k="${key}"]`);if(el)el.focus({preventScroll:true})}
+}
+
+function storyHtml(s,lead,rank){
+  const b=bandOf(s.n);
+  const seg=Array.from({length:10},(_,i)=>`<i${i<s.n?' class="on"':''}></i>`).join('');
+  const dims=DIMS.map((d,i)=>`<li title="${d[1]}"><span>${d[0]}</span><span class="track"><i style="width:${s.d[i]*10}%;--c:var(--d${b})"></i></span><b>${s.d[i]}</b></li>`).join('');
+  const term=s.term?`<p class="term"><strong>${s.term[0]}:</strong> ${s.term[1]}</p>`:'';
+  const lens=P&&P.lens&&s.lens&&s.lens[P.lens];
+  const meanBox=lens?
+    `<p class="mean you"><strong>What it means for you<span class="lenstag">${LENS_NAME[P.lens]}</span></strong>${lens}</p><p class="gen"><strong>In general:</strong> ${s.mean}</p>`:
+    `<p class="mean"><strong>What it means</strong>${s.mean}</p>`;
+  const reason=personal()?`<span class="why4">${reasonOf(s)}</span>`:'';
+  return `<article class="story${lead?' lead':''}${s.fresh?' fresh':''}" id="${s.id}">
+    <div class="pic">${pic(s.img||'skyline',s.t,s.id)}<span class="ptag">${TLABEL[s.t]}</span>${s.fresh?'<span class="justin">Just in</span>':''}${rank?`<span class="rank">#${rank}</span>`:''}<span class="pcap">Illustration</span></div>
+    <div class="sgrid">
+      <div class="score b${b}" role="img" aria-label="Intensity ${s.n} out of 10, ${BAND_NAME[b]}"><b>${s.n}</b><span class="seg" aria-hidden="true">${seg}</span><small>${BAND_NAME[b]}</small></div>
+      <div class="body">
+        <div class="meta"><span class="src">${s.src}</span><span data-ts="${s.ts}">${ago(s.ts)}</span><span>${s.r==='IN'?'India':'Global'}</span><span>Seen in ${s.p} ${plural(s.p,'paper','papers')}</span>${rank?`<span class="buzz">Buzz ${s.bz.toFixed(1)}</span>`:''}${rank&&s.fresh?'<span class="why4">New entry</span>':''}${reason}</div>
+        <h3>${s.h}</h3>
+        <p class="sum">${s.sum}</p>
+        ${meanBox}
+        ${term}
+      </div>
+      <div class="aside">
+        ${figure(s)}
+        <div class="bd">
+          <h5>Score breakdown</h5>
+          <ul>${dims}</ul>
+          <p class="why"><strong>Why ${s.n}:</strong> ${s.why}</p>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ---------- live updates (simulated in this prototype) ---------- */
+function updateBanner(){
+  const n=pending.filter(s=>inRegion(s)&&relevant(s)).length;
+  const b=$('#newbar');b.hidden=!n;
+  if(n)b.textContent=`${n} new ${plural(n,'story','stories')} just in · Show`;
+}
+function showNew(){
+  const add=pending.splice(0);
+  add.forEach(s=>{s.fresh=true;S.push(s)});
+  render();
+  $('#feedTitle').scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'});
+  setTimeout(()=>{add.forEach(s=>{s.fresh=false});document.querySelectorAll('.story.fresh').forEach(e=>e.classList.remove('fresh'))},30000);
+}
+function tick(){
+  document.querySelectorAll('[data-ts]').forEach(el=>{el.textContent=ago(+el.getAttribute('data-ts'))});
+  const sec=Math.floor((Date.now()-lastCheck)/1000);
+  $('#liveTxt').textContent='Live · checked '+(sec<60?sec+' s':Math.floor(sec/60)+' min')+' ago';
+}
+const ARRT=ARR.map(a=>setTimeout(()=>{pending.push(prep(a,Date.now()));lastCheck=Date.now();updateBanner();tick()},a.delay*1000));
+setInterval(tick,5000);
+setInterval(()=>{lastCheck=Date.now();tick()},120000);
+
+/* ---------- onboarding ---------- */
+const OB={step:'kind',kind:null,prog:null,spec:null,topics:new Set(),touched:false};
+const seq=()=>{const s=['kind'];if(OB.kind==='student')s.push('prog');if((OB.kind==='student'&&OB.prog==='mgmt')||OB.kind==='pro')s.push('spec');s.push('topics');return s};
+function obOpen(){
+  if(P){OB.kind=P.kind;OB.prog=P.prog||null;OB.spec=P.spec||null;OB.topics=new Set(P.topics);OB.touched=true}
+  else{OB.kind=null;OB.prog=null;OB.spec=null;OB.topics=new Set();OB.touched=false}
+  OB.step='kind';
+  $('#ob').hidden=false;
+  obRender();
+  const f=$('#ob').querySelector('button');if(f)f.focus();
+}
+function obClose(){$('#ob').hidden=true;const p=$('#profile');if(p)p.focus()}
+function obNext(){const s=seq();OB.step=s[s.indexOf(OB.step)+1];if(OB.step==='topics'&&!OB.touched){OB.topics=new Set(DEF[lensOf(OB)||OB.prog||'reader']||[])}}
+function obBack(){const s=seq();const i=s.indexOf(OB.step);if(i>0)OB.step=s[i-1]}
+function obRender(){
+  const s=seq(),i=s.indexOf(OB.step);
+  let h=`<p class="obstep">Step ${i+1} of ${Math.max(s.length,2)}</p>`;
+  const back=i>0?`<button type="button" class="linkbtn" data-ob="back">Back</button>`:`<button type="button" class="linkbtn" data-ob="skip">Skip for now</button>`;
+  if(OB.step==='kind'){
+    h+=`<h2 id="obT">Welcome. Who is reading?</h2><p class="obsub">Your answer decides which stories we show first and how we explain them.</p><div class="opts">`+
+      KIND.map(o=>`<button type="button" class="opt" data-ob="kind" data-v="${o[0]}"><b>${o[1]}</b><span>${o[2]}</span></button>`).join('')+`</div><div class="obfoot">${back}</div>`;
+  }else if(OB.step==='prog'){
+    h+=`<h2 id="obT">What are you studying?</h2><p class="obsub">We use this to pick topics and the angle of each explanation.</p><div class="opts two">`+
+      PROG.map(o=>`<button type="button" class="opt" data-ob="prog" data-v="${o[0]}"><b>${o[1]}</b></button>`).join('')+`</div><div class="obfoot">${back}</div>`;
+  }else if(OB.step==='spec'){
+    h+=`<h2 id="obT">${OB.kind==='pro'?'What is your function?':'Which specialisation?'}</h2><p class="obsub">Each story gets a short note on what it means for this field.</p><div class="opts two">`+
+      SPEC.map(o=>`<button type="button" class="opt" data-ob="spec" data-v="${o[0]}"><b>${o[1]}</b><span>${o[2]}</span></button>`).join('')+`</div><div class="obfoot">${back}</div>`;
+  }else{
+    const who=pname({kind:OB.kind,prog:OB.prog,spec:OB.spec,lens:lensOf(OB)}).toLowerCase();
+    h+=`<h2 id="obT">Pick what you follow</h2><p class="obsub">${OB.kind==='reader'?'Choose topics, or leave all unselected to see everything.':`We pre-selected topics for a ${who}. Add or remove any.`}</p><div class="chips">`+
+      TOPICS.map(([id,l])=>`<button type="button" class="chip" data-ob="tp" data-v="${id}" aria-pressed="${OB.topics.has(id)}">${l}</button>`).join('')+
+      `</div><div class="obfoot">${back}<button type="button" class="primary" data-ob="done">Show my news</button></div>`;
+  }
+  $('#obBody').innerHTML=h;
+}
+function obDone(){
+  P={kind:OB.kind,prog:OB.prog,spec:OB.spec,lens:lensOf(OB),topics:[...OB.topics]};
+  try{localStorage.setItem('nw_profile',JSON.stringify(P))}catch(e){}
+  state.view='you';state.topic='all';state.src='all';
+  obClose();render();
+}
+$('#ob').addEventListener('keydown',e=>{
+  if(e.key==='Escape'){obClose();return}
+  if(e.key==='Tab'){
+    const f=[...$('#ob').querySelectorAll('button')];if(!f.length)return;
+    const a=document.activeElement,first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&a===first){e.preventDefault();last.focus()}
+    else if(!e.shiftKey&&a===last){e.preventDefault();first.focus()}
+  }
+});
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;
+  const ob=t.dataset.ob;
+  if(ob){
+    if(ob==='kind'){OB.kind=t.dataset.v;OB.prog=null;OB.spec=null;OB.touched=false;obNext();obRender();focusOb()}
+    else if(ob==='prog'){OB.prog=t.dataset.v;OB.spec=null;OB.touched=false;obNext();obRender();focusOb()}
+    else if(ob==='spec'){OB.spec=t.dataset.v;OB.touched=false;obNext();obRender();focusOb()}
+    else if(ob==='tp'){OB.touched=true;const v=t.dataset.v;OB.topics.has(v)?OB.topics.delete(v):OB.topics.add(v);obRender();const el=$('#ob').querySelector(`[data-ob="tp"][data-v="${v}"]`);if(el)el.focus()}
+    else if(ob==='back'){obBack();obRender();focusOb()}
+    else if(ob==='skip'){obClose()}
+    else if(ob==='done'){obDone()}
+    return;
+  }
+  if(t.dataset.mode){setMode(t.dataset.mode)}
+  else if(t.dataset.go){const el=document.getElementById(t.dataset.go);if(el)el.scrollIntoView({block:'start',behavior:reduceMotion()?'auto':'smooth'})}
+  else if(t.dataset.region){state.region=t.dataset.region;render()}
+  else if(t.dataset.topic){state.topic=t.dataset.topic;render()}
+  else if(t.dataset.pulse){state.topic=state.topic===t.dataset.pulse?'all':t.dataset.pulse;render()}
+  else if(t.dataset.bar){state.min=+t.dataset.bar;render()}
+  else if(t.dataset.view){state.view=t.dataset.view;state.topic='all';render()}
+  else if(t.dataset.act==='more'){state.moreTopics=!state.moreTopics;render()}
+  else if(t.dataset.act==='setup'||t.id==='profile'){obOpen()}
+  else if(t.id==='newbar'){showNew()}
+  else if(t.dataset.act==='reset'){state.topic='all';state.src='all';state.min=1;state.q='';$('#q').value='';render()}
+});
+function focusOb(){const f=$('#ob').querySelector('.opt, .chip, .primary, .linkbtn');if(f)f.focus()}
+$('#src').addEventListener('change',e=>{state.src=e.target.value;render()});
+$('#sort').addEventListener('change',e=>{state.sort=e.target.value;render()});
+$('#asof').addEventListener('change',e=>{state.asof=+e.target.value;render()});
+$('#topn').addEventListener('change',e=>{state.topn=+e.target.value;render()});
+window.addEventListener('hashchange',()=>{const h=(location.hash||'').slice(1);if(MODES.includes(h)&&h!==state.mode){state.mode=h;state.asof=0;state.topn=10;render()}});
+$('#min').addEventListener('input',e=>{state.min=+e.target.value;render()});
+$('#q').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();render()});
+
+$('#sort').value=state.sort;
+$('#dateline').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' · India edition';
+render();
+if(!P)obOpen();
+
+
+/* ---------- live data ----------
+   On the real site, stories.json is written every 5 minutes by the pipeline. If it exists, it replaces the sample
+   stories above; if not (prototype preview), the sample stories stay. */
+let liveOn=false;
+function fromLive(o){const s=Object.assign({},o);delete s.pub;delete s.k;delete s.papers;s.hrs=0;return prep(s,Date.parse(o.pub))}
+async function pullLive(){
+  try{
+    const base=(window.NW_DATA||'stories.json');
+    const r=await fetch(base+(base.includes('?')?'&':'?')+'t='+Math.floor(Date.now()/60000),{cache:'no-store'});
+    if(!r.ok)return;
+    const j=await r.json();
+    if(!j||!Array.isArray(j.stories))return;
+    if(!j.stories.length&&!j.updated)return;
+    if(!j.stories.length&&liveOn)return;
+    lastCheck=Date.now();
+    if(!liveOn){
+      liveOn=true;ARRT.forEach(clearTimeout);pending.length=0;S.length=0;
+      j.stories.forEach(o=>S.push(fromLive(o)));
+      render();tick();return;
+    }
+    const have=new Map(S.map(s=>[s.id,s]));
+    const queued=new Set(pending.map(s=>s.id));
+    let changed=false;
+    j.stories.forEach(o=>{
+      const cur=have.get(o.id);
+      if(cur){if(o.p>cur.p){cur.p=o.p;cur.bz=0.6*cur.sc+0.4*Math.min(10,cur.p/1.2);changed=true}}
+      else if(!queued.has(o.id))pending.push(fromLive(o));
+    });
+    updateBanner();tick();
+    if(changed&&state.mode!=='latest')render();
+  }catch(e){}
+}
+pullLive();
+setInterval(pullLive,120000);
+
+</script>
+</body>
+</html>

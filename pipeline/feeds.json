@@ -1,0 +1,12 @@
+{
+  "_note": "Check every URL still works AND that the paper's terms allow this use before you rely on it. Remove any paper that objects. 'region' is IN for India-focused feeds, GL for global.",
+  "feeds": [
+    {"paper": "The Hindu", "region": "IN", "url": "https://www.thehindu.com/news/national/feeder/default.rss"},
+    {"paper": "Indian Express", "region": "IN", "url": "https://indianexpress.com/section/india/feed/"},
+    {"paper": "Hindustan Times", "region": "IN", "url": "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"},
+    {"paper": "Times of India", "region": "IN", "url": "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"},
+    {"paper": "Economic Times", "region": "IN", "url": "https://economictimes.indiatimes.com/rssfeedstopstories.cms"},
+    {"paper": "Mint", "region": "IN", "url": "https://www.livemint.com/rss/news"},
+    {"paper": "BBC News", "region": "GL", "url": "https://feeds.bbci.co.uk/news/world/rss.xml"}
+  ]
+}
